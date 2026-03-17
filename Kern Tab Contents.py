@@ -20,6 +20,7 @@ import os
 import sys
 
 import vanilla
+from AppKit import NSRightTextAlignment
 from GlyphsApp import Glyphs, Message
 from mekkablue import mekkaObject
 
@@ -117,6 +118,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.targetArea.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.targetArea.getNSTextField().setToolTip_(
 			"Desired optical area between each pair, in K units² (×1000). "
 			"E.g. 50 = 50,000 units². Calibrate: run a neutral pair (e.g. 'nn'), "
@@ -151,6 +153,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.depth.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.depth.getNSTextField().setToolTip_(
 			"Maximum probe depth from each glyph side. Larger values give open "
 			"whites (like between A and V) more influence. 150–250 is typical."
@@ -183,6 +186,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.factor.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.factor.getNSTextField().setToolTip_(
 			"Optical correction factor — scales all weights. 1.25 matches the "
 			"HT LetterSpacer default."
@@ -200,6 +204,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.step.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.step.getNSTextField().setToolTip_(
 			"Vertical sampling interval. Smaller = more precise but slower. "
 			"5 units is a good balance."
@@ -219,6 +224,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.minDist.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.minDist.getNSTextField().setToolTip_(
 			"Minimum allowed distance between outlines after kerning (units). "
 			"If the closest point between two glyphs is tighter than this, "
@@ -240,6 +246,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
+		self.w.roundTo.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.roundTo.getNSTextField().setToolTip_(
 			"Round each kern value to the nearest N units. Set to 0 or 1 for "
 			"no rounding. 10 is typical for production fonts."
