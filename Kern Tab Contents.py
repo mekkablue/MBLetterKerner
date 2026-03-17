@@ -524,12 +524,22 @@ class KernTabContents(mekkaObject):
 
 		# Try MBLetterKerner custom parameter first
 		mbParam = master.customParameters["MBLetterKerner"]
-		if mbParam and isinstance(mbParam, dict):
-			for key in ("targetArea", "depth", "factor", "step", "minDist", "roundTo"):
-				if key in mbParam:
-					self._setField(key, mbParam[key])
-			self.w.statusText.set("✅ Loaded from MBLetterKerner parameter.")
-			return
+		if mbParam:
+			# New format: semicolon-separated "key=value; key=value" string
+			if isinstance(mbParam, str):
+				parsed = {}
+				for part in mbParam.split(";"):
+					if "=" in part:
+						k, v = part.split("=", 1)
+						parsed[k.strip()] = v.strip()
+				mbParam = parsed
+			# Old format or freshly parsed dict
+			if isinstance(mbParam, dict):
+				for key in ("targetArea", "depth", "factor", "step", "minDist", "roundTo"):
+					if key in mbParam:
+						self._setField(key, mbParam[key])
+				self.w.statusText.set("✅ Loaded from MBLetterKerner parameter.")
+				return
 
 		# Fall back to HTLetterSpacer parameters
 		htArea  = master.customParameters["paramArea"]
@@ -555,15 +565,15 @@ class KernTabContents(mekkaObject):
 			return
 		master = font.selectedFontMaster
 		try:
-			params = {
-				"targetArea": float(self.pref("targetArea")),
-				"depth":      int(self.pref("depth")),
-				"factor":     float(self.pref("factor")),
-				"step":       int(self.pref("step")),
-				"minDist":    int(self.pref("minDist")),
-				"roundTo":    int(self.pref("roundTo")),
-			}
-			master.customParameters["MBLetterKerner"] = params
+			parts = [
+				"targetArea=%s" % self.pref("targetArea"),
+				"depth=%s"      % self.pref("depth"),
+				"factor=%s"     % self.pref("factor"),
+				"step=%s"       % self.pref("step"),
+				"minDist=%s"    % self.pref("minDist"),
+				"roundTo=%s"    % self.pref("roundTo"),
+			]
+			master.customParameters["MBLetterKerner"] = "; ".join(parts)
 			self.w.statusText.set("✅ Stored in master '%s'." % master.name)
 		except Exception as e:
 			self.w.statusText.set("⚠️ Error: %s" % e)
