@@ -229,13 +229,13 @@ class KernTabContents(mekkaObject):
 
 		# -- Factor ------------------------------------------------------------
 		self.w.labelFactor = vanilla.TextBox(
-			(inset, linePos + 2, 60, 14),
+			(inset, linePos + 2, 130, 14),
 			"Factor:",
 			sizeStyle="small",
 			selectable=True,
 		)
 		self.w.factor = vanilla.EditText(
-			(inset + 60, linePos - 1, 60, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"1.25",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -244,6 +244,19 @@ class KernTabContents(mekkaObject):
 		self.w.factor.getNSTextField().setToolTip_(
 			"Optical correction factor — scales all weights. 1.25 matches the "
 			"HT LetterSpacer default."
+		)
+		_factorBtnX = inset + 130 + 50 + 3
+		self.w.factorDecBtn = vanilla.Button(
+			(_factorBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseFactor,
+			sizeStyle="small",
+		)
+		self.w.factorIncBtn = vanilla.Button(
+			(_factorBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseFactor,
+			sizeStyle="small",
 		)
 		linePos += lineHeight
 
@@ -265,6 +278,19 @@ class KernTabContents(mekkaObject):
 			"Vertical sampling interval in units. Smaller = more precise but slower. "
 			"5 units is a good balance."
 		)
+		_stepBtnX = inset + 130 + 50 + 3
+		self.w.stepDecBtn = vanilla.Button(
+			(_stepBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseStep,
+			sizeStyle="small",
+		)
+		self.w.stepIncBtn = vanilla.Button(
+			(_stepBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseStep,
+			sizeStyle="small",
+		)
 		linePos += lineHeight
 
 		# -- Minimum distance --------------------------------------------------
@@ -275,7 +301,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.minDist = vanilla.EditText(
-			(inset + 129, linePos - 1, 50, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"50",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -287,6 +313,19 @@ class KernTabContents(mekkaObject):
 			"the kern is bumped back to enforce this minimum gap. "
 			"Similar to Kern Bumper. Set to 0 to disable. Default: 50."
 		)
+		_minDistBtnX = inset + 130 + 50 + 3
+		self.w.minDistDecBtn = vanilla.Button(
+			(_minDistBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseMinDist,
+			sizeStyle="small",
+		)
+		self.w.minDistIncBtn = vanilla.Button(
+			(_minDistBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseMinDist,
+			sizeStyle="small",
+		)
 		linePos += lineHeight
 
 		# -- Round to ----------------------------------------------------------
@@ -297,7 +336,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.roundTo = vanilla.EditText(
-			(inset + 130, linePos - 1, 60, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"10",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -306,6 +345,19 @@ class KernTabContents(mekkaObject):
 		self.w.roundTo.getNSTextField().setToolTip_(
 			"Round each kern value to the nearest N units. Set to 0 or 1 for "
 			"no rounding. 10 is typical for production fonts."
+		)
+		_roundBtnX = inset + 130 + 50 + 3
+		self.w.roundDecBtn = vanilla.Button(
+			(_roundBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseRoundTo,
+			sizeStyle="small",
+		)
+		self.w.roundIncBtn = vanilla.Button(
+			(_roundBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseRoundTo,
+			sizeStyle="small",
 		)
 		linePos += lineHeight
 
@@ -397,12 +449,17 @@ class KernTabContents(mekkaObject):
 
 	# -- Stepper helpers -------------------------------------------------------
 
-	def _stepField(self, fieldName, delta):
+	def _stepField(self, fieldName, delta, precision=0):
 		"""Increment/decrement a numeric field by delta and immediately run."""
 		try:
 			val = float(Glyphs.defaults[self.domain(fieldName)])
 			newVal = max(0, val + delta)
-			newStr = str(int(newVal)) if newVal == int(newVal) else str(newVal)
+			if precision > 0:
+				newVal = round(newVal, precision)
+				newStr = str(newVal)
+			else:
+				newVal = round(newVal)
+				newStr = str(int(newVal))
 			Glyphs.defaults[self.domain(fieldName)] = newStr
 			getattr(self.w, fieldName).set(newStr)
 		except Exception:
@@ -420,6 +477,30 @@ class KernTabContents(mekkaObject):
 
 	def increaseDepth(self, sender=None):
 		self._stepField("depth", 10)
+
+	def decreaseFactor(self, sender=None):
+		self._stepField("factor", -0.05, precision=2)
+
+	def increaseFactor(self, sender=None):
+		self._stepField("factor", 0.05, precision=2)
+
+	def decreaseStep(self, sender=None):
+		self._stepField("step", -1)
+
+	def increaseStep(self, sender=None):
+		self._stepField("step", 1)
+
+	def decreaseMinDist(self, sender=None):
+		self._stepField("minDist", -10)
+
+	def increaseMinDist(self, sender=None):
+		self._stepField("minDist", 10)
+
+	def decreaseRoundTo(self, sender=None):
+		self._stepField("roundTo", -5)
+
+	def increaseRoundTo(self, sender=None):
+		self._stepField("roundTo", 5)
 
 	def updateUI(self, sender=None):
 		hasFont = bool(Glyphs.font)
