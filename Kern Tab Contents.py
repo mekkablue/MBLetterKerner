@@ -187,13 +187,13 @@ class KernTabContents(mekkaObject):
 		)
 
 		self.w.labelStep = vanilla.TextBox(
-			(inset + 135, linePos + 2, 55, 14),
-			"Step (units):",
+			(inset + 130, linePos + 2, 68, 14),
+			"Measure step:",
 			sizeStyle="small",
 			selectable=True,
 		)
 		self.w.step = vanilla.EditText(
-			(inset + 200, linePos, 60, 19),
+			(inset + 200, linePos, 55, 19),
 			"5",
 			callback=self.SavePreferences,
 			sizeStyle="small",
