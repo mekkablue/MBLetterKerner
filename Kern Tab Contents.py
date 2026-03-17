@@ -138,7 +138,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 329
+		windowHeight = 351
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -227,7 +227,7 @@ class KernTabContents(mekkaObject):
 		)
 		linePos += lineHeight
 
-		# -- Factor & Step on the same line ------------------------------------
+		# -- Factor ------------------------------------------------------------
 		self.w.labelFactor = vanilla.TextBox(
 			(inset, linePos + 2, 60, 14),
 			"Factor:",
@@ -245,22 +245,24 @@ class KernTabContents(mekkaObject):
 			"Optical correction factor — scales all weights. 1.25 matches the "
 			"HT LetterSpacer default."
 		)
+		linePos += lineHeight
 
+		# -- Measure every (step) ----------------------------------------------
 		self.w.labelStep = vanilla.TextBox(
-			(inset + 130, linePos + 2, 68, 14),
-			"Measure step:",
+			(inset, linePos + 2, 130, 14),
+			"Measure every:",
 			sizeStyle="small",
 			selectable=True,
 		)
 		self.w.step = vanilla.EditText(
-			(inset + 200, linePos - 1, 55, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"5",
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
 		self.w.step.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.step.getNSTextField().setToolTip_(
-			"Vertical sampling interval. Smaller = more precise but slower. "
+			"Vertical sampling interval in units. Smaller = more precise but slower. "
 			"5 units is a good balance."
 		)
 		linePos += lineHeight
