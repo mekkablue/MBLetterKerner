@@ -110,7 +110,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.targetArea = vanilla.EditText(
-			(inset + 130, linePos, -inset, 19),
+			(inset + 130, linePos, 50, 19),
 			"50",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -131,7 +131,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.depth = vanilla.EditText(
-			(inset + 130, linePos, 80, 19),
+			(inset + 130, linePos, 50, 19),
 			"200",
 			callback=self.SavePreferences,
 			sizeStyle="small",
