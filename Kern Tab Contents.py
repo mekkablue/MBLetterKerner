@@ -121,6 +121,19 @@ class KernTabContents(mekkaObject):
 			"check the Macro Window for its current area, divide by 1000, "
 			"and enter that value here."
 		)
+		_areaBtnX = inset + 130 + 50 + 3
+		self.w.areaDecBtn = vanilla.Button(
+			(_areaBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseArea,
+			sizeStyle="small",
+		)
+		self.w.areaIncBtn = vanilla.Button(
+			(_areaBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseArea,
+			sizeStyle="small",
+		)
 		linePos += lineHeight
 
 		# -- Depth -------------------------------------------------------------
@@ -244,6 +257,26 @@ class KernTabContents(mekkaObject):
 		self.LoadPreferences()
 		self.w.open()
 		self.w.makeKey()
+
+	# -- Stepper helpers -------------------------------------------------------
+
+	def _stepField(self, fieldName, delta):
+		"""Increment/decrement a numeric field by delta and immediately run."""
+		try:
+			val = float(Glyphs.defaults[self.domain(fieldName)])
+			newVal = max(0, val + delta)
+			newStr = str(int(newVal)) if newVal == int(newVal) else str(newVal)
+			Glyphs.defaults[self.domain(fieldName)] = newStr
+			getattr(self.w, fieldName).set(newStr)
+		except Exception:
+			pass
+		self.run(None)
+
+	def decreaseArea(self, sender=None):
+		self._stepField("targetArea", -10)
+
+	def increaseArea(self, sender=None):
+		self._stepField("targetArea", 10)
 
 	def updateUI(self, sender=None):
 		hasFont = bool(Glyphs.font)
