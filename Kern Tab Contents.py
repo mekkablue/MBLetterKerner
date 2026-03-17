@@ -30,7 +30,7 @@ _scriptDir = os.path.dirname(os.path.abspath(__file__))
 if _scriptDir not in sys.path:
 	sys.path.insert(0, _scriptDir)
 
-from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph  # noqa: E402
+from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph, measureMinGap  # noqa: E402
 
 if Glyphs.versionNumber >= 3:
 	from GlyphsApp import LTR
@@ -72,6 +72,8 @@ class KernTabContents(mekkaObject):
 		"factor": "1.25",
 		# Vertical sampling interval (units). Smaller = slower but more precise.
 		"step": "5",
+		# Minimum distance between outlines after kerning (units). 0 = disabled.
+		"minDist": "50",
 		# Round kern to nearest N units (0 = no rounding).
 		"roundTo": "10",
 		# Prefer group kerning keys over bare glyph names.
@@ -82,7 +84,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 272
+		windowHeight = 294
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -204,6 +206,27 @@ class KernTabContents(mekkaObject):
 		)
 		linePos += lineHeight
 
+		# -- Minimum distance --------------------------------------------------
+		self.w.labelMinDist = vanilla.TextBox(
+			(inset, linePos + 2, 125, 14),
+			"Minimum distance:",
+			sizeStyle="small",
+			selectable=True,
+		)
+		self.w.minDist = vanilla.EditText(
+			(inset + 129, linePos, 50, 19),
+			"50",
+			callback=self.SavePreferences,
+			sizeStyle="small",
+		)
+		self.w.minDist.getNSTextField().setToolTip_(
+			"Minimum allowed distance between outlines after kerning (units). "
+			"If the closest point between two glyphs is tighter than this, "
+			"the kern is bumped back to enforce this minimum gap. "
+			"Similar to Kern Bumper. Set to 0 to disable. Default: 50."
+		)
+		linePos += lineHeight
+
 		# -- Round to ----------------------------------------------------------
 		self.w.labelRound = vanilla.TextBox(
 			(inset, linePos + 2, 120, 14),
@@ -321,6 +344,7 @@ class KernTabContents(mekkaObject):
 			depth = int(self.pref("depth"))
 			factor = float(self.pref("factor"))
 			step = int(self.pref("step"))
+			minDist = int(self.pref("minDist"))
 			roundTo = int(self.pref("roundTo"))
 		except (TypeError, ValueError) as e:
 			Message("Invalid parameter value:\n%s" % e, "Kern Tab Contents")
@@ -378,6 +402,15 @@ class KernTabContents(mekkaObject):
 				print("\t⚠️  %s: could not measure — skipped" % pairLabel)
 				skipCount += 1
 				continue
+
+			# Apply minimum distance constraint (Kern Bumper logic)
+			if minDist > 0:
+				minGap = measureMinGap(leftLayer, rightLayer, step)
+				if minGap is not None:
+					actualGap = minGap + kern
+					if actualGap < minDist:
+						kern = minDist - minGap
+						print("\t🔒 %s: bumped to min distance (gap was %+g)" % (pairLabel, actualGap))
 
 			# Round kern value
 			if roundTo > 1:

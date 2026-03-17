@@ -25,6 +25,10 @@ opticalWeight(y, xHeight, factor) -> float
 
 measureOpticalArea(layer, side, depth, xHeight, factor, step) -> (float, float)
     Measure the optical white on one side of a layer (area, totalWeight).
+
+measureMinGap(leftLayer, rightLayer, step) -> float | None
+    Return the minimum raw gap (RSB_left + LSB_right) over the vertical
+    overlap, sampled at *step* intervals. Used for minimum-distance bumping.
 """
 
 from AppKit import NSNotFound
@@ -256,6 +260,59 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 	kern = (targetArea / step - weightedGapSum) / totalWeight
 
 	return int(round(kern))
+
+
+# ---------------------------------------------------------------------------
+# Minimum-gap helper (for minimum-distance bumping)
+# ---------------------------------------------------------------------------
+
+def measureMinGap(leftLayer, rightLayer, step=5):
+	"""
+	Return the minimum raw inter-glyph gap over the vertical overlap.
+
+	At each sampled height the raw gap is RSB_left(y) + LSB_right(y) (with no
+	kern applied yet). The minimum across all valid heights is returned. This is
+	used by the caller to enforce a minimum distance: if (minGap + kern) would
+	be smaller than the desired minimum, kern is bumped up accordingly.
+
+	Args:
+		leftLayer  : GSLayer
+		rightLayer : GSLayer
+		step       : vertical sampling interval in font units (default 5)
+
+	Returns:
+		float minimum gap, or None if no valid samples exist.
+	"""
+	try:
+		leftBounds = _layerBounds(leftLayer)
+		rightBounds = _layerBounds(rightLayer)
+	except Exception:
+		return None
+
+	if leftBounds is None or rightBounds is None:
+		return None
+
+	bottomY = max(leftBounds.origin.y, rightBounds.origin.y)
+	topY = min(
+		leftBounds.origin.y + leftBounds.size.height,
+		rightBounds.origin.y + rightBounds.size.height,
+	)
+
+	if topY <= bottomY:
+		return None
+
+	minGap = None
+	y = bottomY
+	while y <= topY:
+		rsbLeft = leftLayer.rsbAtHeight_(y)
+		lsbRight = rightLayer.lsbAtHeight_(y)
+		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
+			gap = rsbLeft + lsbRight
+			if minGap is None or gap < minGap:
+				minGap = gap
+		y += step
+
+	return minGap
 
 
 # ---------------------------------------------------------------------------
