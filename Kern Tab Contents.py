@@ -37,6 +37,31 @@ if Glyphs.versionNumber >= 3:
 	from GlyphsApp import LTR
 	from AppKit import NSNotFound
 
+try:
+	from GlyphsApp import GSLayer as _GSLayer
+except ImportError:
+	_GSLayer = None
+
+
+def _isValidGlyphLayer(layer, font):
+	"""
+	Return True only for real glyph layers whose parent exists in the font.
+	Filters out newline markers, placeholder 'newGlyph' objects, and anything
+	that is not an actual GSLayer.
+	"""
+	if _GSLayer is not None and not isinstance(layer, _GSLayer):
+		return False
+	try:
+		parent = layer.parent
+		if parent is None:
+			return False
+		name = parent.name
+		if not name:
+			return False
+		return font.glyphs[name] is not None
+	except Exception:
+		return False
+
 
 def _setKerningPair(font, masterID, leftKey, rightKey, value):
 	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
@@ -66,7 +91,7 @@ def _getCurrentPairLayers(font):
 	if not tab:
 		return None, None, "No tab open."
 	layers = tab.layers
-	glyphLayers = [l for l in layers if l.parent is not None]
+	glyphLayers = [l for l in layers if _isValidGlyphLayer(l, font)]
 	if len(glyphLayers) < 2:
 		return None, None, "Need at least two glyphs in the tab."
 	cursor = getattr(tab, 'textCursor', None)
@@ -552,7 +577,7 @@ class KernTabContents(mekkaObject):
 		}
 
 		layers = tab.layers
-		glyphLayers = [l for l in layers if l.parent is not None]
+		glyphLayers = [l for l in layers if _isValidGlyphLayer(l, font)]
 
 		Glyphs.clearLog()
 		print("Kern Tab Contents — MB LetterKerner\n")
