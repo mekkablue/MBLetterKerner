@@ -31,7 +31,7 @@ _scriptDir = os.path.dirname(os.path.abspath(__file__))
 if _scriptDir not in sys.path:
 	sys.path.insert(0, _scriptDir)
 
-from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph, measureMinGap  # noqa: E402
+from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph, measureMinGap, measureCurrentOpticalArea  # noqa: E402
 
 if Glyphs.versionNumber >= 3:
 	from GlyphsApp import LTR
@@ -44,6 +44,34 @@ def _setKerningPair(font, masterID, leftKey, rightKey, value):
 		font.setKerningForPair(masterID, leftKey, rightKey, value, LTR)
 	else:
 		font.setKerningForPair(masterID, leftKey, rightKey, value)
+
+
+def _removeKerningPair(font, masterID, leftKey, rightKey):
+	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
+	try:
+		if Glyphs.versionNumber >= 3:
+			font.removeKerningForPair(masterID, leftKey, rightKey, LTR)
+		else:
+			font.removeKerningForPair(masterID, leftKey, rightKey)
+	except Exception:
+		pass
+
+
+def _getCurrentPairLayers(font):
+	"""
+	Return (leftLayer, rightLayer, errorMsg) for the pair at the cursor.
+	errorMsg is None on success, a string on failure.
+	"""
+	tab = font.currentTab
+	if not tab:
+		return None, None, "No tab open."
+	layers = tab.layers
+	glyphLayers = [l for l in layers if l.parent is not None]
+	if len(glyphLayers) < 2:
+		return None, None, "Need at least two glyphs in the tab."
+	cursor = getattr(tab, 'textCursor', None)
+	idx = max(0, min(int(cursor) if cursor is not None else 0, len(glyphLayers) - 2))
+	return glyphLayers[idx], glyphLayers[idx + 1], None
 
 
 def _getKerningPair(font, masterID, leftKey, rightKey):
@@ -85,7 +113,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 307
+		windowHeight = 329
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -123,7 +151,8 @@ class KernTabContents(mekkaObject):
 			"Desired optical area between each pair, in K units² (×1000). "
 			"E.g. 50 = 50,000 units². Calibrate: run a neutral pair (e.g. 'nn'), "
 			"check the Macro Window for its current area, divide by 1000, "
-			"and enter that value here."
+			"and enter that value here. Or use the Measure button to read the "
+			"area of the currently displayed pair directly into this field."
 		)
 		_areaBtnX = inset + 130 + 50 + 3
 		self.w.areaDecBtn = vanilla.Button(
@@ -300,6 +329,27 @@ class KernTabContents(mekkaObject):
 		)
 		linePos += lineHeight
 
+		# -- Handle current pair -----------------------------------------------
+		self.w.labelPair = vanilla.TextBox(
+			(inset, linePos + 2, 120, 14),
+			"Handle current pair:",
+			sizeStyle="small",
+			selectable=True,
+		)
+		self.w.measureBtn = vanilla.Button(
+			(inset + 123, linePos, 62, 18),
+			"Measure",
+			callback=self.measureCurrentPair,
+			sizeStyle="small",
+		)
+		self.w.setZeroBtn = vanilla.Button(
+			(inset + 188, linePos, 80, 18),
+			"Set to Zero",
+			callback=self.setCurrentPairToZero,
+			sizeStyle="small",
+		)
+		linePos += lineHeight
+
 		# -- Status & run button -----------------------------------------------
 		self.w.statusText = vanilla.TextBox(
 			(inset, -20 - inset, -100 - inset, 14),
@@ -409,6 +459,57 @@ class KernTabContents(mekkaObject):
 			self.w.statusText.set("✅ Stored in master '%s'." % master.name)
 		except Exception as e:
 			self.w.statusText.set("⚠️ Error: %s" % e)
+
+	# -- Handle current pair -----------------------------------------------
+
+	def measureCurrentPair(self, sender=None):
+		font = Glyphs.font
+		if not font:
+			self.w.statusText.set("⚠️ No font open.")
+			return
+		leftLayer, rightLayer, err = _getCurrentPairLayers(font)
+		if err:
+			self.w.statusText.set("⚠️ %s" % err)
+			return
+		try:
+			depth  = int(self.pref("depth"))
+			factor = float(self.pref("factor"))
+			step   = int(self.pref("step"))
+		except Exception:
+			self.w.statusText.set("⚠️ Invalid parameters.")
+			return
+		master  = font.selectedFontMaster
+		xHeight = master.xHeight
+		area = measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor, step)
+		if area is None:
+			self.w.statusText.set("⚠️ Could not measure pair.")
+			return
+		areaK = area / 1000.0
+		fmt = "%.0f" % areaK if areaK == int(areaK) else "%.1f" % areaK
+		self._setField("targetArea", fmt)
+		left  = leftLayer.parent.name  if leftLayer.parent  else "?"
+		right = rightLayer.parent.name if rightLayer.parent else "?"
+		self.w.statusText.set("Measured %s|%s: %s K units²" % (left, right, fmt))
+
+	def setCurrentPairToZero(self, sender=None):
+		font = Glyphs.font
+		if not font:
+			self.w.statusText.set("⚠️ No font open.")
+			return
+		leftLayer, rightLayer, err = _getCurrentPairLayers(font)
+		if err:
+			self.w.statusText.set("⚠️ %s" % err)
+			return
+		useGroups  = self.prefBool("useGroups")
+		leftGlyph  = leftLayer.parent
+		rightGlyph = rightLayer.parent
+		leftKey  = kernKeyForGlyph(leftGlyph,  'right', useGroups)
+		rightKey = kernKeyForGlyph(rightGlyph, 'left',  useGroups)
+		masterID = font.selectedFontMaster.id
+		_removeKerningPair(font, masterID, leftKey, rightKey)
+		left  = leftGlyph.name  if leftGlyph  else "?"
+		right = rightGlyph.name if rightGlyph else "?"
+		self.w.statusText.set("Kern deleted: %s | %s" % (left, right))
 
 	# ------------------------------------------------------------------
 

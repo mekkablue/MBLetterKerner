@@ -29,6 +29,10 @@ measureOpticalArea(layer, side, depth, xHeight, factor, step) -> (float, float)
 measureMinGap(leftLayer, rightLayer, step) -> float | None
     Return the minimum raw gap (RSB_left + LSB_right) over the vertical
     overlap, sampled at *step* intervals. Used for minimum-distance bumping.
+
+measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor, step) -> float | None
+    Return the current optical area between two layers (no target applied).
+    Useful for reading the area of the currently displayed pair.
 """
 
 from AppKit import NSNotFound
@@ -313,6 +317,55 @@ def measureMinGap(leftLayer, rightLayer, step=5):
 		y += step
 
 	return minGap
+
+
+# ---------------------------------------------------------------------------
+# Current optical area (no target — just measure what's there now)
+# ---------------------------------------------------------------------------
+
+def measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor=1.25, step=5):
+	"""
+	Return the current optical area in the inter-glyph corridor (units²).
+
+	Uses the same sampling logic as kernLayerToLayer but skips the kern
+	calculation — it simply returns weightedGapSum × step, which is the
+	area that kernLayerToLayer would try to match against a target.
+
+	Returns float area, or None if the measurement cannot be performed.
+	"""
+	try:
+		leftBounds = _layerBounds(leftLayer)
+		rightBounds = _layerBounds(rightLayer)
+	except Exception:
+		return None
+
+	if leftBounds is None or rightBounds is None:
+		return None
+
+	bottomY = max(leftBounds.origin.y, rightBounds.origin.y)
+	topY = min(
+		leftBounds.origin.y + leftBounds.size.height,
+		rightBounds.origin.y + rightBounds.size.height,
+	)
+
+	if topY <= bottomY:
+		return None
+
+	step = max(1, int(step))
+	weightedGapSum = 0.0
+
+	y = bottomY
+	while y <= topY:
+		rsbLeft = leftLayer.rsbAtHeight_(y)
+		lsbRight = rightLayer.lsbAtHeight_(y)
+		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
+			rsbClamped = min(rsbLeft, depth)
+			lsbClamped = min(lsbRight, depth)
+			w = opticalWeight(y, xHeight, factor)
+			weightedGapSum += w * (rsbClamped + lsbClamped)
+		y += step
+
+	return weightedGapSum * step
 
 
 # ---------------------------------------------------------------------------
