@@ -153,6 +153,19 @@ class KernTabContents(mekkaObject):
 			"Maximum probe depth from each glyph side. Larger values give open "
 			"whites (like between A and V) more influence. 150–250 is typical."
 		)
+		_depthBtnX = inset + 130 + 50 + 3
+		self.w.depthDecBtn = vanilla.Button(
+			(_depthBtnX, linePos, 20, 18),
+			"◀︎",
+			callback=self.decreaseDepth,
+			sizeStyle="small",
+		)
+		self.w.depthIncBtn = vanilla.Button(
+			(_depthBtnX + 22, linePos, 20, 18),
+			"►",
+			callback=self.increaseDepth,
+			sizeStyle="small",
+		)
 		linePos += lineHeight
 
 		# -- Factor & Step on the same line ------------------------------------
@@ -277,6 +290,12 @@ class KernTabContents(mekkaObject):
 
 	def increaseArea(self, sender=None):
 		self._stepField("targetArea", 10)
+
+	def decreaseDepth(self, sender=None):
+		self._stepField("depth", -10)
+
+	def increaseDepth(self, sender=None):
+		self._stepField("depth", 10)
 
 	def updateUI(self, sender=None):
 		hasFont = bool(Glyphs.font)
