@@ -85,7 +85,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 294
+		windowHeight = 285
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -278,10 +278,6 @@ class KernTabContents(mekkaObject):
 			"When enabled, pairs with an existing kern value are left untouched."
 		)
 		linePos += lineHeight + 4
-
-		# -- Divider -----------------------------------------------------------
-		self.w.divider = vanilla.HorizontalLine((inset, linePos, -inset, 1))
-		linePos += 8
 
 		# -- Status & run button -----------------------------------------------
 		self.w.statusText = vanilla.TextBox(
