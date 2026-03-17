@@ -85,7 +85,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 285
+		windowHeight = 307
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -279,6 +279,27 @@ class KernTabContents(mekkaObject):
 		)
 		linePos += lineHeight + 4
 
+		# -- Master values in custom parameters --------------------------------
+		self.w.labelMaster = vanilla.TextBox(
+			(inset, linePos + 2, 185, 14),
+			"Master values in custom parameters:",
+			sizeStyle="small",
+			selectable=True,
+		)
+		self.w.extractBtn = vanilla.Button(
+			(inset + 188, linePos, 55, 18),
+			"Extract",
+			callback=self.extractPrefs,
+			sizeStyle="small",
+		)
+		self.w.storeBtn = vanilla.Button(
+			(inset + 246, linePos, 50, 18),
+			"Store",
+			callback=self.storePrefs,
+			sizeStyle="small",
+		)
+		linePos += lineHeight
+
 		# -- Status & run button -----------------------------------------------
 		self.w.statusText = vanilla.TextBox(
 			(inset, -20 - inset, -100 - inset, 14),
@@ -327,6 +348,67 @@ class KernTabContents(mekkaObject):
 		hasFont = bool(Glyphs.font)
 		hasTab = hasFont and bool(Glyphs.font.currentTab)
 		self.w.runButton.enable(hasTab)
+
+	# -- Extract / Store ---------------------------------------------------
+
+	def _setField(self, fieldName, value):
+		"""Set a UI field and persist to Glyphs.defaults."""
+		s = str(value)
+		Glyphs.defaults[self.domain(fieldName)] = s
+		getattr(self.w, fieldName).set(s)
+
+	def extractPrefs(self, sender=None):
+		font = Glyphs.font
+		if not font:
+			self.w.statusText.set("⚠️ No font open.")
+			return
+		master = font.selectedFontMaster
+
+		# Try MBLetterKerner custom parameter first
+		mbParam = master.customParameters["MBLetterKerner"]
+		if mbParam and isinstance(mbParam, dict):
+			for key in ("targetArea", "depth", "factor", "step", "minDist", "roundTo"):
+				if key in mbParam:
+					self._setField(key, mbParam[key])
+			self.w.statusText.set("✅ Loaded from MBLetterKerner parameter.")
+			return
+
+		# Fall back to HTLetterSpacer parameters
+		htArea  = master.customParameters["paramArea"]
+		htDepth = master.customParameters["paramDepth"]
+		htFreq  = master.customParameters["paramFreq"]
+		if htArea is not None or htDepth is not None:
+			if htArea is not None:
+				areaK = float(htArea) / 1000.0
+				self._setField("targetArea", int(areaK) if areaK == int(areaK) else round(areaK, 2))
+			if htDepth is not None:
+				self._setField("depth", int(htDepth))
+			if htFreq is not None:
+				self._setField("step", int(htFreq))
+			self.w.statusText.set("✅ Loaded from HTLetterSpacer parameter.")
+			return
+
+		self.w.statusText.set("⚠️ No stored prefs found in font.")
+
+	def storePrefs(self, sender=None):
+		font = Glyphs.font
+		if not font:
+			self.w.statusText.set("⚠️ No font open.")
+			return
+		master = font.selectedFontMaster
+		try:
+			params = {
+				"targetArea": float(self.pref("targetArea")),
+				"depth":      int(self.pref("depth")),
+				"factor":     float(self.pref("factor")),
+				"step":       int(self.pref("step")),
+				"minDist":    int(self.pref("minDist")),
+				"roundTo":    int(self.pref("roundTo")),
+			}
+			master.customParameters["MBLetterKerner"] = params
+			self.w.statusText.set("✅ Stored in master '%s'." % master.name)
+		except Exception as e:
+			self.w.statusText.set("⚠️ Error: %s" % e)
 
 	# ------------------------------------------------------------------
 
