@@ -112,7 +112,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.targetArea = vanilla.EditText(
-			(inset + 130, linePos, 50, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"50",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -146,7 +146,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.depth = vanilla.EditText(
-			(inset + 130, linePos, 50, 19),
+			(inset + 130, linePos - 1, 50, 19),
 			"200",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -178,7 +178,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.factor = vanilla.EditText(
-			(inset + 60, linePos, 60, 19),
+			(inset + 60, linePos - 1, 60, 19),
 			"1.25",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -195,7 +195,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.step = vanilla.EditText(
-			(inset + 200, linePos, 55, 19),
+			(inset + 200, linePos - 1, 55, 19),
 			"5",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -214,7 +214,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.minDist = vanilla.EditText(
-			(inset + 129, linePos, 50, 19),
+			(inset + 129, linePos - 1, 50, 19),
 			"50",
 			callback=self.SavePreferences,
 			sizeStyle="small",
@@ -235,7 +235,7 @@ class KernTabContents(mekkaObject):
 			selectable=True,
 		)
 		self.w.roundTo = vanilla.EditText(
-			(inset + 130, linePos, 60, 19),
+			(inset + 130, linePos - 1, 60, 19),
 			"10",
 			callback=self.SavePreferences,
 			sizeStyle="small",
