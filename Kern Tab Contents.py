@@ -293,7 +293,7 @@ class KernTabContents(mekkaObject):
 			(-80 - inset, -20 - inset, -inset, -inset),
 			"Kern",
 			callback=self.run,
-			sizeStyle="small",
+			sizeStyle="regular",
 		)
 		self.w.setDefaultButton(self.w.runButton)
 
