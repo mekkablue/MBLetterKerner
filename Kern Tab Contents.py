@@ -387,21 +387,21 @@ class KernTabContents(mekkaObject):
 		)
 		linePos += lineHeight + 4
 
-		# -- Master values in custom parameters --------------------------------
+		# -- LetterKerner values in custom parameters --------------------------
 		self.w.labelMaster = vanilla.TextBox(
-			(inset, linePos + 2, 185, 14),
-			"Master values in custom parameters:",
+			(inset, linePos + 2, 120, 14),
+			"LetterKerner values:",
 			sizeStyle="small",
 			selectable=True,
 		)
 		self.w.extractBtn = vanilla.Button(
-			(inset + 188, linePos, 55, 18),
+			(inset + 123, linePos, 62, 18),
 			"Extract",
 			callback=self.extractPrefs,
 			sizeStyle="small",
 		)
 		self.w.storeBtn = vanilla.Button(
-			(inset + 246, linePos, 50, 18),
+			(inset + 188, linePos, 80, 18),
 			"Store",
 			callback=self.storePrefs,
 			sizeStyle="small",
