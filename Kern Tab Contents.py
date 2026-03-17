@@ -12,8 +12,8 @@ area to the target. Existing kerning can optionally be preserved.
 
 Calibration tip: open a tab with a representative "neutral" pair (e.g. "nn"
 for lowercase, "HH" for uppercase), run with your chosen depth/factor/step,
-then read the "Current area" in the Macro Window and use that value as your
-target area for subsequent runs.
+then read the "Current area" in the Macro Window and use that value divided
+by 1000 as your target area (the field is in K units², so 50 = 50,000 units²).
 """
 
 import os
@@ -64,8 +64,8 @@ def _getKerningPair(font, masterID, leftKey, rightKey):
 
 class KernTabContents(mekkaObject):
 	prefDict = {
-		# Optical area target (units²). Calibrate with a neutral pair.
-		"targetArea": "50000",
+		# Optical area target in K units² (×1000 for algorithm). Default 50 = 50,000 units².
+		"targetArea": "50",
 		# Max probe depth from each glyph side (units).
 		"depth": "200",
 		# Optical correction factor, matching HT LetterSpacer default.
@@ -105,20 +105,21 @@ class KernTabContents(mekkaObject):
 		# -- Target area -------------------------------------------------------
 		self.w.labelArea = vanilla.TextBox(
 			(inset, linePos + 2, 120, 14),
-			"Target area (units²):",
+			"Target area (K units²):",
 			sizeStyle="small",
 			selectable=True,
 		)
 		self.w.targetArea = vanilla.EditText(
 			(inset + 130, linePos, -inset, 19),
-			"50000",
+			"50",
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
 		self.w.targetArea.getNSTextField().setToolTip_(
-			"Desired optical area between each pair. Calibrate: run a neutral pair "
-			"(e.g. 'nn'), check the Macro Window for its current area, and paste "
-			"that number here."
+			"Desired optical area between each pair, in K units² (×1000). "
+			"E.g. 50 = 50,000 units². Calibrate: run a neutral pair (e.g. 'nn'), "
+			"check the Macro Window for its current area, divide by 1000, "
+			"and enter that value here."
 		)
 		linePos += lineHeight
 
@@ -264,7 +265,7 @@ class KernTabContents(mekkaObject):
 
 		# -- Read parameters ---------------------------------------------------
 		try:
-			targetArea = float(self.pref("targetArea"))
+			targetArea = float(self.pref("targetArea")) * 1000.0  # K units² → units²
 			depth = int(self.pref("depth"))
 			factor = float(self.pref("factor"))
 			step = int(self.pref("step"))
@@ -293,7 +294,8 @@ class KernTabContents(mekkaObject):
 
 		Glyphs.clearLog()
 		print("Kern Tab Contents — MB LetterKerner\n")
-		print("Master: %s  |  x-height: %g  |  target area: %g\n" % (master.name, xHeight, targetArea))
+		print("Master: %s  |  x-height: %g  |  target area: %g units² (%g K)\n" % (
+			master.name, xHeight, targetArea, targetArea / 1000.0))
 
 		setCount = 0
 		skipCount = 0
