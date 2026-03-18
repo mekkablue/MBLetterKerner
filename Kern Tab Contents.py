@@ -738,9 +738,10 @@ class KernTabContents(mekkaObject):
 
 			pairLabel = "%s | %s" % (leftGlyph.name, rightGlyph.name)
 
-			# Always skip Separator and Mark glyphs
-			_skipCats = {"Separator", "Mark"}
-			if leftGlyph.category in _skipCats or rightGlyph.category in _skipCats:
+			# Always skip glyphs with no category or non-spacing categories
+			_skipCats = {"Separator", "Mark", "Corner"}
+			if (not leftGlyph.category or leftGlyph.category in _skipCats or
+					not rightGlyph.category or rightGlyph.category in _skipCats):
 				print("\t⏭  %s: skipped (category: %s / %s)" % (
 					pairLabel, leftGlyph.category, rightGlyph.category))
 				skipCount += 1
