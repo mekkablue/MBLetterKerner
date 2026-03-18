@@ -31,7 +31,12 @@ _scriptDir = os.path.dirname(os.path.abspath(__file__))
 if _scriptDir not in sys.path:
 	sys.path.insert(0, _scriptDir)
 
-from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph, measureMinGap, measureCurrentOpticalArea  # noqa: E402
+from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph  # noqa: E402
+try:
+	from mbLetterKerner import measureMinGap, measureCurrentOpticalArea  # noqa: E402
+except ImportError:
+	measureMinGap = None
+	measureCurrentOpticalArea = None
 
 if Glyphs.versionNumber >= 3:
 	from GlyphsApp import LTR
@@ -581,6 +586,9 @@ class KernTabContents(mekkaObject):
 	# -- Handle current pair -----------------------------------------------
 
 	def measureCurrentPair(self, sender=None):
+		if measureCurrentOpticalArea is None:
+			self.w.statusText.set("⚠️ Update mbLetterKerner.py to use Measure.")
+			return
 		font = Glyphs.font
 		if not font:
 			self.w.statusText.set("⚠️ No font open.")
@@ -708,7 +716,7 @@ class KernTabContents(mekkaObject):
 				continue
 
 			# Apply minimum distance constraint (Kern Bumper logic)
-			if minDist > 0:
+			if minDist > 0 and measureMinGap is not None:
 				minGap = measureMinGap(leftLayer, rightLayer, step)
 				if minGap is not None:
 					actualGap = minGap + kern
