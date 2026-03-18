@@ -16,6 +16,7 @@ then read the "Current area" in the Macro Window and use that value divided
 by 1000 as your target area (the field is in K units², so 50 = 50,000 units²).
 """
 
+import importlib
 import os
 import sys
 
@@ -30,6 +31,12 @@ from mekkablue import mekkaObject
 _scriptDir = os.path.dirname(os.path.abspath(__file__))
 if _scriptDir not in sys.path:
 	sys.path.insert(0, _scriptDir)
+
+# Force reload so edits to mbLetterKerner.py are picked up within a Glyphs
+# session (Glyphs reuses the same Python interpreter across script runs, which
+# means sys.modules caches the old bytecode unless we explicitly reload).
+import mbLetterKerner as _mbLetterKernerModule  # noqa: E402
+importlib.reload(_mbLetterKernerModule)
 
 from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph  # noqa: E402
 try:
