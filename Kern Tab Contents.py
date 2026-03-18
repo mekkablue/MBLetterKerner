@@ -110,8 +110,8 @@ def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
 	glyph-group, and glyph-glyph. This ensures a clean slate before setting
 	the new value regardless of what combination was stored previously.
 	"""
-	lGroupKey = ("@MMK_R_%s" % leftGlyph.rightKerningGroup) if leftGlyph.rightKerningGroup else None
-	rGroupKey = ("@MMK_L_%s" % rightGlyph.leftKerningGroup) if rightGlyph.leftKerningGroup else None
+	lGroupKey = ("@MMK_L_%s" % leftGlyph.rightKerningGroup) if leftGlyph.rightKerningGroup else None
+	rGroupKey = ("@MMK_R_%s" % rightGlyph.leftKerningGroup) if rightGlyph.leftKerningGroup else None
 	leftKeys  = [k for k in (lGroupKey, leftGlyph.name)  if k]
 	rightKeys = [k for k in (rGroupKey, rightGlyph.name) if k]
 	for lk in leftKeys:

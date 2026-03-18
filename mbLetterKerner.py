@@ -396,9 +396,9 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 		if side == 'right':
 			group = glyph.rightKerningGroup
 			if group:
-				return "@MMK_R_%s" % group
+				return "@MMK_L_%s" % group
 		else:
 			group = glyph.leftKerningGroup
 			if group:
-				return "@MMK_L_%s" % group
+				return "@MMK_R_%s" % group
 	return glyph.name
