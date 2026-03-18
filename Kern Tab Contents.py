@@ -104,6 +104,21 @@ def _getCurrentPairLayers(font):
 	return glyphLayers[idx], glyphLayers[idx + 1], None
 
 
+def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
+	"""
+	Remove every kern variant for a glyph pair: group-group, group-glyph,
+	glyph-group, and glyph-glyph. This ensures a clean slate before setting
+	the new value regardless of what combination was stored previously.
+	"""
+	lGroupKey = ("@MMK_R_%s" % leftGlyph.rightKerningGroup) if leftGlyph.rightKerningGroup else None
+	rGroupKey = ("@MMK_L_%s" % rightGlyph.leftKerningGroup) if rightGlyph.leftKerningGroup else None
+	leftKeys  = [k for k in (lGroupKey, leftGlyph.name)  if k]
+	rightKeys = [k for k in (rGroupKey, rightGlyph.name) if k]
+	for lk in leftKeys:
+		for rk in rightKeys:
+			_removeKerningPair(font, masterID, lk, rk)
+
+
 def _getKerningPair(font, masterID, leftKey, rightKey):
 	"""
 	Return the current explicit kern value for the key pair, or None if not set.
@@ -137,13 +152,15 @@ class KernTabContents(mekkaObject):
 		"roundTo": "10",
 		# Prefer group kerning keys over bare glyph names.
 		"useGroups": 1,
+		# When enabled, remove all existing kern variants before setting the new value.
+		"overwriteExisting": 0,
 		# When enabled, skip pairs that already have an explicit kern value.
 		"skipExisting": 0,
 	}
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 351
+		windowHeight = 373
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -377,6 +394,20 @@ class KernTabContents(mekkaObject):
 		self.w.useGroups.getNSButton().setToolTip_(
 			"When enabled, kern pairs are stored against @MMK group keys. "
 			"Disable to kern individual glyphs only."
+		)
+		linePos += lineHeight
+
+		self.w.overwriteExisting = vanilla.CheckBox(
+			(inset, linePos, -inset, 20),
+			"Overwrite preexisting kerning for affected glyphs",
+			value=False,
+			callback=self.SavePreferences,
+			sizeStyle="small",
+		)
+		self.w.overwriteExisting.getNSButton().setToolTip_(
+			"Before setting the new kern value, delete all existing kern pairs "
+			"that involve the same glyphs in any combination: group-group, "
+			"group-glyph, glyph-group, and glyph-glyph."
 		)
 		linePos += lineHeight
 
@@ -669,6 +700,7 @@ class KernTabContents(mekkaObject):
 			return
 
 		useGroups = self.prefBool("useGroups")
+		overwriteExisting = self.prefBool("overwriteExisting")
 		skipExisting = self.prefBool("skipExisting")
 
 		master = font.selectedFontMaster
@@ -713,6 +745,10 @@ class KernTabContents(mekkaObject):
 					print("\t☑️  %s: skipped (existing kern %+g)" % (pairLabel, existing))
 					skipCount += 1
 					continue
+
+			# Optionally clear all existing kern variants before setting new value
+			if overwriteExisting:
+				_clearAllKernVariants(font, masterID, leftGlyph, rightGlyph)
 
 			kern = kernLayerToLayer(leftLayer, rightLayer, parameters)
 
