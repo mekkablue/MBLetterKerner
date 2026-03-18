@@ -652,7 +652,13 @@ class KernTabContents(mekkaObject):
 
 		# -- Read parameters ---------------------------------------------------
 		try:
-			targetArea = float(self.pref("targetArea")) * 1000.0  # K units² → units²
+			targetAreaK = float(self.pref("targetArea"))
+			# Auto-correct: if user typed raw units² (5+ digits), divide by 1000
+			if targetAreaK >= 10000:
+				targetAreaK /= 1000.0
+				newStr = ("%.0f" % targetAreaK) if targetAreaK == int(targetAreaK) else ("%.2f" % targetAreaK)
+				self._setField("targetArea", newStr)
+			targetArea = targetAreaK * 1000.0  # K units² → units²
 			depth = int(self.pref("depth"))
 			factor = float(self.pref("factor"))
 			step = int(self.pref("step"))
