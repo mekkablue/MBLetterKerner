@@ -134,8 +134,9 @@ def measureOpticalArea(layer, side, depth, xHeight, factor=1.25, step=5):
 		sum of all optical weights at sampled heights.
 		Returns (0.0, 0.0) if the layer has no measurable bounds.
 	"""
+	workLayer = layer.copyDecomposedLayer()
 	try:
-		bounds = _layerBounds(layer)
+		bounds = _layerBounds(workLayer)
 	except Exception:
 		return 0.0, 0.0
 
@@ -148,7 +149,7 @@ def measureOpticalArea(layer, side, depth, xHeight, factor=1.25, step=5):
 
 	y = bottomY
 	while y <= topY:
-		dist = layer.lsbAtHeight_(y) if leftSide else layer.rsbAtHeight_(y)
+		dist = workLayer.lsbAtHeight_(y) if leftSide else workLayer.rsbAtHeight_(y)
 		if dist < NSNotFound:
 			clamped = min(dist, depth)
 			w = opticalWeight(y, xHeight, factor)
@@ -217,12 +218,15 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 	xHeight = float(parameters.get("xHeight", 500))
 	step = int(max(1, parameters.get("step", 5)))
 
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
+
 	# ------------------------------------------------------------------
 	# Determine vertical sampling range: overlap of both layers' bounds
 	# ------------------------------------------------------------------
 	try:
-		leftBounds = _layerBounds(leftLayer)
-		rightBounds = _layerBounds(rightLayer)
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
 	except Exception:
 		return None
 
@@ -247,8 +251,8 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 
 	y = bottomY
 	while y <= topY:
-		rsbLeft = leftLayer.rsbAtHeight_(y)
-		lsbRight = rightLayer.lsbAtHeight_(y)
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
 
 		# Skip heights where either glyph has no outline (counters, gaps)
 		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
@@ -297,9 +301,11 @@ def measureMinGap(leftLayer, rightLayer, step=5):
 	Returns:
 		float minimum gap, or None if no valid samples exist.
 	"""
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
 	try:
-		leftBounds = _layerBounds(leftLayer)
-		rightBounds = _layerBounds(rightLayer)
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
 	except Exception:
 		return None
 
@@ -318,8 +324,8 @@ def measureMinGap(leftLayer, rightLayer, step=5):
 	minGap = None
 	y = bottomY
 	while y <= topY:
-		rsbLeft = leftLayer.rsbAtHeight_(y)
-		lsbRight = rightLayer.lsbAtHeight_(y)
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
 		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
 			gap = rsbLeft + lsbRight
 			if minGap is None or gap < minGap:
@@ -343,9 +349,11 @@ def measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor=1.25
 
 	Returns float area, or None if the measurement cannot be performed.
 	"""
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
 	try:
-		leftBounds = _layerBounds(leftLayer)
-		rightBounds = _layerBounds(rightLayer)
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
 	except Exception:
 		return None
 
@@ -366,8 +374,8 @@ def measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor=1.25
 
 	y = bottomY
 	while y <= topY:
-		rsbLeft = leftLayer.rsbAtHeight_(y)
-		lsbRight = rightLayer.lsbAtHeight_(y)
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
 		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
 			rsbClamped = min(rsbLeft, depth)
 			lsbClamped = min(lsbRight, depth)
