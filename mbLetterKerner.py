@@ -43,6 +43,16 @@ try:
 except Exception:
 	_glyphs3 = False
 
+try:
+	from GlyphsApp import LTR as _LTR
+except ImportError:
+	_LTR = None
+
+try:
+	from GlyphsApp import GSLayer as _GSLayer
+except ImportError:
+	_GSLayer = None
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -400,3 +410,104 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 		if group:
 			return group
 	return glyph.name
+
+
+# ---------------------------------------------------------------------------
+# Kerning pair read/write helpers (Glyphs 2 / 3 compatible)
+# ---------------------------------------------------------------------------
+
+def setKerningPair(font, masterID, leftKey, rightKey, value):
+	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print(f"\t✏️  setKerning: {leftKey} | {rightKey} = {value:+g}")
+	if _glyphs3 and _LTR is not None:
+		font.setKerningForPair(masterID, leftKey, rightKey, value, _LTR)
+	else:
+		font.setKerningForPair(masterID, leftKey, rightKey, value)
+
+
+def removeKerningPair(font, masterID, leftKey, rightKey):
+	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print(f"\t🗑  removeKerning: {leftKey} | {rightKey}")
+	try:
+		if _glyphs3 and _LTR is not None:
+			font.removeKerningForPair(masterID, leftKey, rightKey, _LTR)
+		else:
+			font.removeKerningForPair(masterID, leftKey, rightKey)
+	except Exception:
+		pass
+
+
+def clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
+	"""
+	Remove every kern variant for a glyph pair: group-group, group-glyph,
+	glyph-group, and glyph-glyph. This ensures a clean slate before setting
+	the new value regardless of what combination was stored previously.
+	Also removes the reversed-prefix format to clean up any stale pairs from
+	earlier script runs that used the wrong prefix convention.
+	"""
+	lg = leftGlyph.rightKerningGroup
+	rg = rightGlyph.leftKerningGroup
+	lGroupKey = lg if lg else None
+	rGroupKey = rg if rg else None
+	lLegacy = [f"@{lg}", f"@MMK_L_{lg}", f"@MMK_R_{lg}"] if lg else []
+	rLegacy = [f"@{rg}", f"@MMK_L_{rg}", f"@MMK_R_{rg}"] if rg else []
+	print(f"\t🗑  clear variants: left keys {lGroupKey} / {leftGlyph.name}, right keys {rGroupKey} / {rightGlyph.name}")
+	allLeftKeys  = [k for k in ([lGroupKey] + lLegacy + [leftGlyph.name])  if k]
+	allRightKeys = [k for k in ([rGroupKey] + rLegacy + [rightGlyph.name]) if k]
+	for lk in allLeftKeys:
+		for rk in allRightKeys:
+			removeKerningPair(font, masterID, lk, rk)
+
+
+def getKerningPair(font, masterID, leftKey, rightKey):
+	"""
+	Return the current explicit kern value for the key pair, or None if not set.
+	Uses a try/except to handle Glyphs 2 / 3 API differences gracefully.
+	"""
+	try:
+		if _glyphs3 and _LTR is not None:
+			value = font.kerningForPair(masterID, leftKey, rightKey, _LTR)
+		else:
+			value = font.kerningForPair(masterID, leftKey, rightKey)
+		if value is not None and value < NSNotFound:
+			return value
+	except Exception:
+		pass
+	return None
+
+
+def isValidGlyphLayer(layer, font):
+	"""
+	Return True only for real glyph layers whose parent exists in the font.
+	Filters out newline markers, placeholder 'newGlyph' objects, and anything
+	that is not an actual GSLayer.
+	"""
+	if _GSLayer is not None and not isinstance(layer, _GSLayer):
+		return False
+	try:
+		parent = layer.parent
+		if parent is None:
+			return False
+		name = parent.name
+		if not name:
+			return False
+		return font.glyphs[name] is not None
+	except Exception:
+		return False
+
+
+def getCurrentPairLayers(font):
+	"""
+	Return (leftLayer, rightLayer, errorMsg) for the pair at the cursor.
+	errorMsg is None on success, a string on failure.
+	"""
+	tab = font.currentTab
+	if not tab:
+		return None, None, "No tab open."
+	layers = tab.layers
+	glyphLayers = [l for l in layers if isValidGlyphLayer(l, font)]
+	if len(glyphLayers) < 2:
+		return None, None, "Need at least two glyphs in the tab."
+	cursor = getattr(tab, 'textCursor', None)
+	idx = max(0, min(int(cursor) if cursor is not None else 0, len(glyphLayers) - 2))
+	return glyphLayers[idx], glyphLayers[idx + 1], None

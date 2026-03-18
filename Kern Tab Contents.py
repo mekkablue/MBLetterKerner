@@ -35,123 +35,21 @@ if _scriptDir not in sys.path:
 # Force reload so edits to mbLetterKerner.py are picked up within a Glyphs
 # session (Glyphs reuses the same Python interpreter across script runs, which
 # means sys.modules caches the old bytecode unless we explicitly reload).
-import mbLetterKerner as _mbLetterKernerModule  # noqa: E402
+import mbLetterKerner as _mbLetterKernerModule
 importlib.reload(_mbLetterKernerModule)
 
-from mbLetterKerner import kernLayerToLayer, kernKeyForGlyph  # noqa: E402
-try:
-	from mbLetterKerner import measureMinGap, measureCurrentOpticalArea  # noqa: E402
-except ImportError:
-	measureMinGap = None
-	measureCurrentOpticalArea = None
-
-if Glyphs.versionNumber >= 3:
-	from GlyphsApp import LTR
-	from AppKit import NSNotFound
-
-try:
-	from GlyphsApp import GSLayer as _GSLayer
-except ImportError:
-	_GSLayer = None
-
-
-def _isValidGlyphLayer(layer, font):
-	"""
-	Return True only for real glyph layers whose parent exists in the font.
-	Filters out newline markers, placeholder 'newGlyph' objects, and anything
-	that is not an actual GSLayer.
-	"""
-	if _GSLayer is not None and not isinstance(layer, _GSLayer):
-		return False
-	try:
-		parent = layer.parent
-		if parent is None:
-			return False
-		name = parent.name
-		if not name:
-			return False
-		return font.glyphs[name] is not None
-	except Exception:
-		return False
-
-
-def _setKerningPair(font, masterID, leftKey, rightKey, value):
-	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
-	print(f"\t✏️  setKerning: {leftKey} | {rightKey} = {value:+g}")
-	if Glyphs.versionNumber >= 3:
-		font.setKerningForPair(masterID, leftKey, rightKey, value, LTR)
-	else:
-		font.setKerningForPair(masterID, leftKey, rightKey, value)
-
-
-def _removeKerningPair(font, masterID, leftKey, rightKey):
-	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
-	print(f"\t🗑  removeKerning: {leftKey} | {rightKey}")
-	try:
-		if Glyphs.versionNumber >= 3:
-			font.removeKerningForPair(masterID, leftKey, rightKey, LTR)
-		else:
-			font.removeKerningForPair(masterID, leftKey, rightKey)
-	except Exception:
-		pass
-
-
-def _getCurrentPairLayers(font):
-	"""
-	Return (leftLayer, rightLayer, errorMsg) for the pair at the cursor.
-	errorMsg is None on success, a string on failure.
-	"""
-	tab = font.currentTab
-	if not tab:
-		return None, None, "No tab open."
-	layers = tab.layers
-	glyphLayers = [l for l in layers if _isValidGlyphLayer(l, font)]
-	if len(glyphLayers) < 2:
-		return None, None, "Need at least two glyphs in the tab."
-	cursor = getattr(tab, 'textCursor', None)
-	idx = max(0, min(int(cursor) if cursor is not None else 0, len(glyphLayers) - 2))
-	return glyphLayers[idx], glyphLayers[idx + 1], None
-
-
-def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
-	"""
-	Remove every kern variant for a glyph pair: group-group, group-glyph,
-	glyph-group, and glyph-glyph. This ensures a clean slate before setting
-	the new value regardless of what combination was stored previously.
-	Also removes the reversed-prefix format to clean up any stale pairs from
-	earlier script runs that used the wrong prefix convention.
-	"""
-	lg = leftGlyph.rightKerningGroup
-	rg = rightGlyph.leftKerningGroup
-	# Correct format: bare group name (Glyphs resolves it as group kerning)
-	lGroupKey = lg if lg else None
-	rGroupKey = rg if rg else None
-	# Legacy cleanup: previous runs stored pairs with @group or @MMK_*_ prefixes
-	lLegacy = [f"@{lg}", f"@MMK_L_{lg}", f"@MMK_R_{lg}"] if lg else []
-	rLegacy = [f"@{rg}", f"@MMK_L_{rg}", f"@MMK_R_{rg}"] if rg else []
-	print(f"\t🗑  clear variants: left keys {lGroupKey} / {leftGlyph.name}, right keys {rGroupKey} / {rightGlyph.name}")
-	allLeftKeys  = [k for k in ([lGroupKey] + lLegacy + [leftGlyph.name])  if k]
-	allRightKeys = [k for k in ([rGroupKey] + rLegacy + [rightGlyph.name]) if k]
-	for lk in allLeftKeys:
-		for rk in allRightKeys:
-			_removeKerningPair(font, masterID, lk, rk)
-
-
-def _getKerningPair(font, masterID, leftKey, rightKey):
-	"""
-	Return the current explicit kern value for the key pair, or None if not set.
-	Uses a try/except to handle Glyphs 2 / 3 API differences gracefully.
-	"""
-	try:
-		if Glyphs.versionNumber >= 3:
-			value = font.kerningForPair(masterID, leftKey, rightKey, LTR)
-		else:
-			value = font.kerningForPair(masterID, leftKey, rightKey)
-		if value is not None and value < NSNotFound:
-			return value
-	except Exception:
-		pass
-	return None
+from mbLetterKerner import (
+	clearAllKernVariants,
+	getCurrentPairLayers,
+	getKerningPair,
+	isValidGlyphLayer,
+	kernKeyForGlyph,
+	kernLayerToLayer,
+	measureCurrentOpticalArea,
+	measureMinGap,
+	removeKerningPair,
+	setKerningPair,
+)
 
 
 class KernTabContents(mekkaObject):
@@ -213,7 +111,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.targetArea.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.targetArea.getNSTextField().setToolTip_(
+		self.w.targetArea.setToolTip(
 			"Desired optical area between each pair, in K units² (×1000). "
 			"E.g. 50 = 50,000 units². Calibrate: run a neutral pair (e.g. 'nn'), "
 			"check the Macro Window for its current area, divide by 1000, "
@@ -227,14 +125,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseArea,
 			sizeStyle="small",
 		)
-		self.w.areaDecBtn.getNSButton().setToolTip_("Decrease target area")
+		self.w.areaDecBtn.setToolTip("Decrease target area")
 		self.w.areaIncBtn = vanilla.Button(
 			(_areaBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseArea,
 			sizeStyle="small",
 		)
-		self.w.areaIncBtn.getNSButton().setToolTip_("Increase target area")
+		self.w.areaIncBtn.setToolTip("Increase target area")
 		linePos += lineHeight
 
 		# -- Depth -------------------------------------------------------------
@@ -252,7 +150,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.depth.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.depth.getNSTextField().setToolTip_(
+		self.w.depth.setToolTip(
 			"Maximum probe depth from each glyph side. Larger values give open "
 			"whites (like between A and V) more influence. 150–250 is typical."
 		)
@@ -263,14 +161,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseDepth,
 			sizeStyle="small",
 		)
-		self.w.depthDecBtn.getNSButton().setToolTip_("Decrease probe depth")
+		self.w.depthDecBtn.setToolTip("Decrease probe depth")
 		self.w.depthIncBtn = vanilla.Button(
 			(_depthBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseDepth,
 			sizeStyle="small",
 		)
-		self.w.depthIncBtn.getNSButton().setToolTip_("Increase probe depth")
+		self.w.depthIncBtn.setToolTip("Increase probe depth")
 		linePos += lineHeight
 
 		# -- Factor ------------------------------------------------------------
@@ -288,7 +186,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.factor.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.factor.getNSTextField().setToolTip_(
+		self.w.factor.setToolTip(
 			"Optical correction factor — scales all weights. 1.25 matches the "
 			"HT LetterSpacer default."
 		)
@@ -299,14 +197,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseFactor,
 			sizeStyle="small",
 		)
-		self.w.factorDecBtn.getNSButton().setToolTip_("Decrease factor")
+		self.w.factorDecBtn.setToolTip("Decrease factor")
 		self.w.factorIncBtn = vanilla.Button(
 			(_factorBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseFactor,
 			sizeStyle="small",
 		)
-		self.w.factorIncBtn.getNSButton().setToolTip_("Increase factor")
+		self.w.factorIncBtn.setToolTip("Increase factor")
 		linePos += lineHeight
 
 		# -- Measure every (step) ----------------------------------------------
@@ -324,7 +222,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.step.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.step.getNSTextField().setToolTip_(
+		self.w.step.setToolTip(
 			"Vertical sampling interval in units. Smaller = more precise but slower. "
 			"5 units is a good balance."
 		)
@@ -335,14 +233,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseStep,
 			sizeStyle="small",
 		)
-		self.w.stepDecBtn.getNSButton().setToolTip_("Decrease sampling interval (coarser, faster)")
+		self.w.stepDecBtn.setToolTip("Decrease sampling interval (coarser, faster)")
 		self.w.stepIncBtn = vanilla.Button(
 			(_stepBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseStep,
 			sizeStyle="small",
 		)
-		self.w.stepIncBtn.getNSButton().setToolTip_("Increase sampling interval (coarser, faster)")
+		self.w.stepIncBtn.setToolTip("Increase sampling interval (coarser, faster)")
 		linePos += lineHeight
 
 		# -- Minimum distance --------------------------------------------------
@@ -360,7 +258,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.minDist.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.minDist.getNSTextField().setToolTip_(
+		self.w.minDist.setToolTip(
 			"Minimum allowed distance between outlines after kerning (units). "
 			"If the closest point between two glyphs is tighter than this, "
 			"the kern is bumped back to enforce this minimum gap. "
@@ -373,14 +271,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseMinDist,
 			sizeStyle="small",
 		)
-		self.w.minDistDecBtn.getNSButton().setToolTip_("Decrease minimum distance")
+		self.w.minDistDecBtn.setToolTip("Decrease minimum distance")
 		self.w.minDistIncBtn = vanilla.Button(
 			(_minDistBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseMinDist,
 			sizeStyle="small",
 		)
-		self.w.minDistIncBtn.getNSButton().setToolTip_("Increase minimum distance")
+		self.w.minDistIncBtn.setToolTip("Increase minimum distance")
 		linePos += lineHeight
 
 		# -- Round to ----------------------------------------------------------
@@ -398,7 +296,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.roundTo.getNSTextField().setAlignment_(NSRightTextAlignment)
-		self.w.roundTo.getNSTextField().setToolTip_(
+		self.w.roundTo.setToolTip(
 			"Round each kern value to the nearest N units. Set to 0 or 1 for "
 			"no rounding. 10 is typical for production fonts."
 		)
@@ -409,14 +307,14 @@ class KernTabContents(mekkaObject):
 			callback=self.decreaseRoundTo,
 			sizeStyle="small",
 		)
-		self.w.roundDecBtn.getNSButton().setToolTip_("Decrease rounding step")
+		self.w.roundDecBtn.setToolTip("Decrease rounding step")
 		self.w.roundIncBtn = vanilla.Button(
 			(_roundBtnX + 22, linePos, 20, 18),
 			"+",
 			callback=self.increaseRoundTo,
 			sizeStyle="small",
 		)
-		self.w.roundIncBtn.getNSButton().setToolTip_("Increase rounding step")
+		self.w.roundIncBtn.setToolTip("Increase rounding step")
 		linePos += lineHeight + 6
 
 		# -- Checkboxes --------------------------------------------------------
@@ -427,7 +325,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
-		self.w.useGroups.getNSButton().setToolTip_(
+		self.w.useGroups.setToolTip(
 			"When enabled, kern pairs are stored against kerning group keys. "
 			"Disable to kern individual glyphs only."
 		)
@@ -440,7 +338,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
-		self.w.overwriteExisting.getNSButton().setToolTip_(
+		self.w.overwriteExisting.setToolTip(
 			"Before setting the new kern value, delete all existing kern pairs "
 			"that involve the same glyphs in any combination: group-group, "
 			"group-glyph, glyph-group, and glyph-glyph."
@@ -454,7 +352,7 @@ class KernTabContents(mekkaObject):
 			callback=self.SavePreferences,
 			sizeStyle="small",
 		)
-		self.w.skipExisting.getNSButton().setToolTip_(
+		self.w.skipExisting.setToolTip(
 			"When enabled, pairs with an existing kern value are left untouched."
 		)
 		linePos += lineHeight + 8
@@ -473,7 +371,7 @@ class KernTabContents(mekkaObject):
 			callback=self.extractPrefs,
 			sizeStyle="small",
 		)
-		self.w.extractBtn.getNSButton().setToolTip_(
+		self.w.extractBtn.setToolTip(
 			"Load settings from the MBLetterkerner custom parameter of the current master."
 		)
 		self.w.storeBtn = vanilla.Button(
@@ -482,7 +380,7 @@ class KernTabContents(mekkaObject):
 			callback=self.storePrefs,
 			sizeStyle="small",
 		)
-		self.w.storeBtn.getNSButton().setToolTip_(
+		self.w.storeBtn.setToolTip(
 			"Save current settings into the MBLetterkerner custom parameter of the current master."
 		)
 		linePos += lineHeight
@@ -501,7 +399,7 @@ class KernTabContents(mekkaObject):
 			callback=self.measureCurrentPair,
 			sizeStyle="small",
 		)
-		self.w.measureBtn.getNSButton().setToolTip_(
+		self.w.measureBtn.setToolTip(
 			"Measure the optical area of the current pair and load it into the Target area field."
 		)
 		self.w.setZeroBtn = vanilla.Button(
@@ -510,7 +408,7 @@ class KernTabContents(mekkaObject):
 			callback=self.setCurrentPairToZero,
 			sizeStyle="small",
 		)
-		self.w.setZeroBtn.getNSButton().setToolTip_(
+		self.w.setZeroBtn.setToolTip(
 			"Set an explicit kern of 0 for the current pair (overrides any group kern)."
 		)
 		linePos += lineHeight
@@ -527,7 +425,7 @@ class KernTabContents(mekkaObject):
 			callback=self.run,
 			sizeStyle="regular",
 		)
-		self.w.runButton.getNSButton().setToolTip_(
+		self.w.runButton.setToolTip(
 			"Kern all consecutive pairs in the current tab using the settings above."
 		)
 		self.w.setDefaultButton(self.w.runButton)
@@ -677,7 +575,7 @@ class KernTabContents(mekkaObject):
 		if not font:
 			self.w.statusText.set("⚠️ No font open.")
 			return
-		leftLayer, rightLayer, err = _getCurrentPairLayers(font)
+		leftLayer, rightLayer, err = getCurrentPairLayers(font)
 		if err:
 			self.w.statusText.set("⚠️ %s" % err)
 			return
@@ -706,7 +604,7 @@ class KernTabContents(mekkaObject):
 		if not font:
 			self.w.statusText.set("⚠️ No font open.")
 			return
-		leftLayer, rightLayer, err = _getCurrentPairLayers(font)
+		leftLayer, rightLayer, err = getCurrentPairLayers(font)
 		if err:
 			self.w.statusText.set("⚠️ %s" % err)
 			return
@@ -716,7 +614,7 @@ class KernTabContents(mekkaObject):
 		leftKey  = kernKeyForGlyph(leftGlyph,  'right', useGroups)
 		rightKey = kernKeyForGlyph(rightGlyph, 'left',  useGroups)
 		masterID = font.selectedFontMaster.id
-		_removeKerningPair(font, masterID, leftKey, rightKey)
+		removeKerningPair(font, masterID, leftKey, rightKey)
 		left  = leftGlyph.name  if leftGlyph  else "?"
 		right = rightGlyph.name if rightGlyph else "?"
 		self.w.statusText.set("Kern deleted: %s | %s" % (left, right))
@@ -769,7 +667,7 @@ class KernTabContents(mekkaObject):
 		}
 
 		layers = tab.layers
-		glyphLayers = [l for l in layers if _isValidGlyphLayer(l, font)]
+		glyphLayers = [l for l in layers if isValidGlyphLayer(l, font)]
 
 		Glyphs.clearLog()
 		print("Kern Tab Contents — MB Letterkerner\n")
@@ -823,7 +721,7 @@ class KernTabContents(mekkaObject):
 
 			# Optionally skip pairs with existing kerning
 			if skipExisting:
-				existing = _getKerningPair(font, masterID, leftKey, rightKey)
+				existing = getKerningPair(font, masterID, leftKey, rightKey)
 				if existing is not None:
 					print(f"\t☑️  {pairLabel}: skipped (existing kern {existing:+g})")
 					skipCount += 1
@@ -831,7 +729,7 @@ class KernTabContents(mekkaObject):
 
 			# Optionally clear all existing kern variants before setting new value
 			if overwriteExisting:
-				_clearAllKernVariants(font, masterID, leftGlyph, rightGlyph)
+				clearAllKernVariants(font, masterID, leftGlyph, rightGlyph)
 
 			kern = kernLayerToLayer(leftLayer, rightLayer, parameters)
 
@@ -853,7 +751,7 @@ class KernTabContents(mekkaObject):
 			if roundTo > 1:
 				kern = roundTo * round(kern / roundTo)
 
-			_setKerningPair(font, masterID, leftKey, rightKey, kern)
+			setKerningPair(font, masterID, leftKey, rightKey, kern)
 			print(f"\t↔️  {pairLabel}: {kern:+g}")
 			setCount += 1
 
