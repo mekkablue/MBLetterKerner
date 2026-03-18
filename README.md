@@ -1,4 +1,4 @@
-# MB LetterKerner
+# MB Letterkerner
 
 Optical kerning scripts for [Glyphs.app](https://glyphsapp.com/), by [mekkablue](https://github.com/mekkablue).
 
@@ -6,7 +6,7 @@ Optical kerning scripts for [Glyphs.app](https://glyphsapp.com/), by [mekkablue]
 
 ## Concept
 
-**MB LetterKerner** borrows the optical measurement engine from
+**MB Letterkerner** borrows the optical measurement engine from
 **[HT LetterSpacer](https://github.com/huertatipografica/HTLetterSpacer)**
 by [Huerta Tipográfica](https://www.huertatipografica.com/) and repurposes
 it for kerning.
@@ -14,7 +14,7 @@ it for kerning.
 HT LetterSpacer shoots horizontal rays inward from each side of a glyph,
 accumulates depth-clamped, vertically-weighted distances (the *optical white
 area*), and adjusts the glyph's sidebearings until that area matches a
-target. MB LetterKerner applies the same measurement to the *corridor between
+target. MB Letterkerner applies the same measurement to the *corridor between
 two glyphs* — the right white of the left glyph plus the left white of the
 right glyph — and instead of moving any sidebearings, it calculates the kern
 value that brings the combined optical area to the target.
@@ -127,11 +127,10 @@ script per tab.
 
 ## Installation
 
-Place the `MB LetterKerner` folder inside your Glyphs scripts folder
+Place the `MB Letterkerner` folder inside your Glyphs scripts folder
 (`~/Library/Application Support/Glyphs 3/Scripts/` or the path shown
-in *Glyphs → Preferences → Addons → Scripts*) and refresh the Script
-menu (`Script → Refresh Script Menu`, or hold Option while opening the
-menu).
+in *Glyphs → Preferences → Addons → Scripts*) and choose *Script > Reload Scripts*
+(hold Option and choose the menu item, or press Cmd-Opt-Shift-Y).
 
 Both files must stay in the same folder: `Kern Tab Contents.py` imports
 `mbLetterKerner.py` from its own directory at runtime.
