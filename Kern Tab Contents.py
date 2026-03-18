@@ -738,6 +738,19 @@ class KernTabContents(mekkaObject):
 
 			pairLabel = "%s | %s" % (leftGlyph.name, rightGlyph.name)
 
+			# Always skip pairs where either layer is empty (no shapes, no bounds)
+			def _layerEmpty(layer):
+				if layer.shapes:
+					return False
+				try:
+					return layer.bounds is None
+				except Exception:
+					return True
+			if _layerEmpty(leftLayer) or _layerEmpty(rightLayer):
+				print("\t⏭  %s: skipped (empty layer)" % pairLabel)
+				skipCount += 1
+				continue
+
 			# Always skip glyphs with no category or non-spacing categories
 			_skipCats = {"Separator", "Mark", "Corner"}
 			if (not leftGlyph.category or leftGlyph.category in _skipCats or
