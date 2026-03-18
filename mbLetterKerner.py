@@ -25,6 +25,14 @@ opticalWeight(y, xHeight, factor) -> float
 
 measureOpticalArea(layer, side, depth, xHeight, factor, step) -> (float, float)
     Measure the optical white on one side of a layer (area, totalWeight).
+
+measureMinGap(leftLayer, rightLayer, step) -> float | None
+    Return the minimum raw gap (RSB_left + LSB_right) over the vertical
+    overlap, sampled at *step* intervals. Used for minimum-distance bumping.
+
+measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor, step) -> float | None
+    Return the current optical area between two layers (no target applied).
+    Useful for reading the area of the currently displayed pair.
 """
 
 from AppKit import NSNotFound
@@ -34,6 +42,16 @@ try:
 	_glyphs3 = _Glyphs.versionNumber >= 3
 except Exception:
 	_glyphs3 = False
+
+try:
+	from GlyphsApp import LTR as _LTR
+except ImportError:
+	_LTR = None
+
+try:
+	from GlyphsApp import GSLayer as _GSLayer
+except ImportError:
+	_GSLayer = None
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +134,9 @@ def measureOpticalArea(layer, side, depth, xHeight, factor=1.25, step=5):
 		sum of all optical weights at sampled heights.
 		Returns (0.0, 0.0) if the layer has no measurable bounds.
 	"""
+	workLayer = layer.copyDecomposedLayer()
 	try:
-		bounds = _layerBounds(layer)
+		bounds = _layerBounds(workLayer)
 	except Exception:
 		return 0.0, 0.0
 
@@ -130,7 +149,7 @@ def measureOpticalArea(layer, side, depth, xHeight, factor=1.25, step=5):
 
 	y = bottomY
 	while y <= topY:
-		dist = layer.lsbAtHeight_(y) if leftSide else layer.rsbAtHeight_(y)
+		dist = workLayer.lsbAtHeight_(y) if leftSide else workLayer.rsbAtHeight_(y)
 		if dist < NSNotFound:
 			clamped = min(dist, depth)
 			w = opticalWeight(y, xHeight, factor)
@@ -199,12 +218,15 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 	xHeight = float(parameters.get("xHeight", 500))
 	step = int(max(1, parameters.get("step", 5)))
 
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
+
 	# ------------------------------------------------------------------
 	# Determine vertical sampling range: overlap of both layers' bounds
 	# ------------------------------------------------------------------
 	try:
-		leftBounds = _layerBounds(leftLayer)
-		rightBounds = _layerBounds(rightLayer)
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
 	except Exception:
 		return None
 
@@ -229,8 +251,8 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 
 	y = bottomY
 	while y <= topY:
-		rsbLeft = leftLayer.rsbAtHeight_(y)
-		lsbRight = rightLayer.lsbAtHeight_(y)
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
 
 		# Skip heights where either glyph has no outline (counters, gaps)
 		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
@@ -259,6 +281,112 @@ def kernLayerToLayer(leftLayer, rightLayer, parameters=None):
 
 
 # ---------------------------------------------------------------------------
+# Minimum-gap helper (for minimum-distance bumping)
+# ---------------------------------------------------------------------------
+
+def measureMinGap(leftLayer, rightLayer, step=5):
+	"""
+	Return the minimum raw inter-glyph gap over the vertical overlap.
+
+	At each sampled height the raw gap is RSB_left(y) + LSB_right(y) (with no
+	kern applied yet). The minimum across all valid heights is returned. This is
+	used by the caller to enforce a minimum distance: if (minGap + kern) would
+	be smaller than the desired minimum, kern is bumped up accordingly.
+
+	Args:
+		leftLayer  : GSLayer
+		rightLayer : GSLayer
+		step       : vertical sampling interval in font units (default 5)
+
+	Returns:
+		float minimum gap, or None if no valid samples exist.
+	"""
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
+	try:
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
+	except Exception:
+		return None
+
+	if leftBounds is None or rightBounds is None:
+		return None
+
+	bottomY = max(leftBounds.origin.y, rightBounds.origin.y)
+	topY = min(
+		leftBounds.origin.y + leftBounds.size.height,
+		rightBounds.origin.y + rightBounds.size.height,
+	)
+
+	if topY <= bottomY:
+		return None
+
+	minGap = None
+	y = bottomY
+	while y <= topY:
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
+		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
+			gap = rsbLeft + lsbRight
+			if minGap is None or gap < minGap:
+				minGap = gap
+		y += step
+
+	return minGap
+
+
+# ---------------------------------------------------------------------------
+# Current optical area (no target — just measure what's there now)
+# ---------------------------------------------------------------------------
+
+def measureCurrentOpticalArea(leftLayer, rightLayer, depth, xHeight, factor=1.25, step=5):
+	"""
+	Return the current optical area in the inter-glyph corridor (units²).
+
+	Uses the same sampling logic as kernLayerToLayer but skips the kern
+	calculation — it simply returns weightedGapSum × step, which is the
+	area that kernLayerToLayer would try to match against a target.
+
+	Returns float area, or None if the measurement cannot be performed.
+	"""
+	workLeft  = leftLayer.copyDecomposedLayer()
+	workRight = rightLayer.copyDecomposedLayer()
+	try:
+		leftBounds = _layerBounds(workLeft)
+		rightBounds = _layerBounds(workRight)
+	except Exception:
+		return None
+
+	if leftBounds is None or rightBounds is None:
+		return None
+
+	bottomY = max(leftBounds.origin.y, rightBounds.origin.y)
+	topY = min(
+		leftBounds.origin.y + leftBounds.size.height,
+		rightBounds.origin.y + rightBounds.size.height,
+	)
+
+	if topY <= bottomY:
+		return None
+
+	step = max(1, int(step))
+	weightedGapSum = 0.0
+
+	y = bottomY
+	while y <= topY:
+		rsbLeft  = workLeft.rsbAtHeight_(y)
+		lsbRight = workRight.lsbAtHeight_(y)
+		if rsbLeft < NSNotFound and lsbRight < NSNotFound:
+			rsbClamped = min(rsbLeft, depth)
+			lsbClamped = min(lsbRight, depth)
+			w = opticalWeight(y, xHeight, factor)
+			weightedGapSum += w * (rsbClamped + lsbClamped)
+		y += step
+
+	return weightedGapSum * step
+
+
+# ---------------------------------------------------------------------------
 # Kerning-key helper
 # ---------------------------------------------------------------------------
 
@@ -269,9 +397,9 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 	Uses the glyph's kerning group when available (and useGroups is True),
 	falling back to the bare glyph name.
 
-	Glyphs uses the prefixes:
-	  @MMK_R_  for the right kerning group of the LEFT  glyph in a pair
-	  @MMK_L_  for the left  kerning group of the RIGHT glyph in a pair
+	Pass the return value directly to setKerningForPair / removeKerningForPair.
+	Glyphs resolves a bare group name (e.g. "T") as group kerning internally.
+	Falls back to the glyph name when no group is set or useGroups is False.
 
 	Args:
 		glyph     : GSGlyph
@@ -285,10 +413,109 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 	if useGroups:
 		if side == 'right':
 			group = glyph.rightKerningGroup
-			if group:
-				return "@MMK_R_%s" % group
 		else:
 			group = glyph.leftKerningGroup
-			if group:
-				return "@MMK_L_%s" % group
+		if group:
+			return group
 	return glyph.name
+
+
+# ---------------------------------------------------------------------------
+# Kerning pair read/write helpers (Glyphs 2 / 3 compatible)
+# ---------------------------------------------------------------------------
+
+def setKerningPair(font, masterID, leftKey, rightKey, value):
+	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print(f"\t✏️  setKerning: {leftKey} | {rightKey} = {value:+g}")
+	if _glyphs3 and _LTR is not None:
+		font.setKerningForPair(masterID, leftKey, rightKey, value, _LTR)
+	else:
+		font.setKerningForPair(masterID, leftKey, rightKey, value)
+
+
+def removeKerningPair(font, masterID, leftKey, rightKey):
+	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print(f"\t🗑  removeKerning: {leftKey} | {rightKey}")
+	try:
+		if _glyphs3 and _LTR is not None:
+			font.removeKerningForPair(masterID, leftKey, rightKey, _LTR)
+		else:
+			font.removeKerningForPair(masterID, leftKey, rightKey)
+	except Exception:
+		pass
+
+
+def clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
+	"""
+	Remove every kern variant for a glyph pair: group-group, group-glyph,
+	glyph-group, and glyph-glyph. This ensures a clean slate before setting
+	the new value regardless of what combination was stored previously.
+	Also removes the reversed-prefix format to clean up any stale pairs from
+	earlier script runs that used the wrong prefix convention.
+	"""
+	lg = leftGlyph.rightKerningGroup
+	rg = rightGlyph.leftKerningGroup
+	lGroupKey = lg if lg else None
+	rGroupKey = rg if rg else None
+	lLegacy = [f"@{lg}", f"@MMK_L_{lg}", f"@MMK_R_{lg}"] if lg else []
+	rLegacy = [f"@{rg}", f"@MMK_L_{rg}", f"@MMK_R_{rg}"] if rg else []
+	print(f"\t🗑  clear variants: left keys {lGroupKey} / {leftGlyph.name}, right keys {rGroupKey} / {rightGlyph.name}")
+	allLeftKeys  = [k for k in ([lGroupKey] + lLegacy + [leftGlyph.name])  if k]
+	allRightKeys = [k for k in ([rGroupKey] + rLegacy + [rightGlyph.name]) if k]
+	for lk in allLeftKeys:
+		for rk in allRightKeys:
+			removeKerningPair(font, masterID, lk, rk)
+
+
+def getKerningPair(font, masterID, leftKey, rightKey):
+	"""
+	Return the current explicit kern value for the key pair, or None if not set.
+	Uses a try/except to handle Glyphs 2 / 3 API differences gracefully.
+	"""
+	try:
+		if _glyphs3 and _LTR is not None:
+			value = font.kerningForPair(masterID, leftKey, rightKey, _LTR)
+		else:
+			value = font.kerningForPair(masterID, leftKey, rightKey)
+		if value is not None and value < NSNotFound:
+			return value
+	except Exception:
+		pass
+	return None
+
+
+def isValidGlyphLayer(layer, font):
+	"""
+	Return True only for real glyph layers whose parent exists in the font.
+	Filters out newline markers, placeholder 'newGlyph' objects, and anything
+	that is not an actual GSLayer.
+	"""
+	if _GSLayer is not None and not isinstance(layer, _GSLayer):
+		return False
+	try:
+		parent = layer.parent
+		if parent is None:
+			return False
+		name = parent.name
+		if not name:
+			return False
+		return font.glyphs[name] is not None
+	except Exception:
+		return False
+
+
+def getCurrentPairLayers(font):
+	"""
+	Return (leftLayer, rightLayer, errorMsg) for the pair at the cursor.
+	errorMsg is None on success, a string on failure.
+	"""
+	tab = font.currentTab
+	if not tab:
+		return None, None, "No tab open."
+	layers = tab.layers
+	glyphLayers = [l for l in layers if isValidGlyphLayer(l, font)]
+	if len(glyphLayers) < 2:
+		return None, None, "Need at least two glyphs in the tab."
+	cursor = getattr(tab, 'textCursor', None)
+	idx = max(0, min(int(cursor) if cursor is not None else 0, len(glyphLayers) - 2))
+	return glyphLayers[idx], glyphLayers[idx + 1], None
