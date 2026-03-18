@@ -725,6 +725,7 @@ class KernTabContents(mekkaObject):
 
 		setCount = 0
 		skipCount = 0
+		seenPairs = set()  # (leftKey, rightKey) pairs already kerned this run
 
 		for i in range(len(glyphLayers) - 1):
 			leftLayer = glyphLayers[i]
@@ -737,6 +738,13 @@ class KernTabContents(mekkaObject):
 			rightKey = kernKeyForGlyph(rightGlyph, 'left', useGroups)
 
 			pairLabel = "%s | %s" % (leftGlyph.name, rightGlyph.name)
+
+			# Skip duplicate kern keys already handled in this run
+			if (leftKey, rightKey) in seenPairs:
+				print("\t⏭  %s: skipped (already kerned this run)" % pairLabel)
+				skipCount += 1
+				continue
+			seenPairs.add((leftKey, rightKey))
 
 			# Always skip pairs where either layer is empty (no shapes, no bounds)
 			def _layerEmpty(layer):
