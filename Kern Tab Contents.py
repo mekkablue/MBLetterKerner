@@ -83,9 +83,8 @@ def _removeKerningPair(font, masterID, leftKey, rightKey):
 			font.removeKerningForPair(masterID, leftKey, rightKey, LTR)
 		else:
 			font.removeKerningForPair(masterID, leftKey, rightKey)
-		print("\t\t🗑  removed kern: %s | %s" % (leftKey, rightKey))
-	except Exception as e:
-		print("\t\t⚠️  remove failed (%s | %s): %s" % (leftKey, rightKey, e))
+	except Exception:
+		pass
 
 
 def _getCurrentPairLayers(font):
@@ -115,7 +114,6 @@ def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
 	rGroupKey = ("@MMK_L_%s" % rightGlyph.leftKerningGroup) if rightGlyph.leftKerningGroup else None
 	leftKeys  = [k for k in (lGroupKey, leftGlyph.name)  if k]
 	rightKeys = [k for k in (rGroupKey, rightGlyph.name) if k]
-	print("\t\t🔍 overwrite: leftKeys=%s  rightKeys=%s" % (leftKeys, rightKeys))
 	for lk in leftKeys:
 		for rk in rightKeys:
 			_removeKerningPair(font, masterID, lk, rk)
@@ -803,11 +801,10 @@ class KernTabContents(mekkaObject):
 				kern = roundTo * round(kern / roundTo)
 
 			_setKerningPair(font, masterID, leftKey, rightKey, kern)
-			readback = _getKerningPair(font, masterID, leftKey, rightKey)
-			print("\t↔️  %s: %+g  [keys: %s | %s  readback: %s]" % (
-				pairLabel, kern, leftKey, rightKey, readback))
+			print("\t↔️  %s: %+g" % (pairLabel, kern))
 			setCount += 1
 
+		Glyphs.redraw()
 		print("\nDone: %d pair(s) kerned, %d skipped." % (setCount, skipCount))
 		self.w.statusText.set("%d pair(s) kerned." % setCount)
 		Glyphs.showNotification(
