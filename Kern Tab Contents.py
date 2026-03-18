@@ -178,7 +178,7 @@ class KernTabContents(mekkaObject):
 
 	def __init__(self):
 		windowWidth = 360
-		windowHeight = 373
+		windowHeight = 383
 		self.w = vanilla.FloatingWindow(
 			(windowWidth, windowHeight),
 			"Kern Tab Contents",
@@ -200,11 +200,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Target area -------------------------------------------------------
 		self.w.labelArea = vanilla.TextBox(
-			(inset, linePos + 2, 120, 14),
+			(inset, linePos + 2, 126, 14),
 			"Target area (K units²):",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelArea.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.targetArea = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"50",
@@ -238,11 +239,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Depth -------------------------------------------------------------
 		self.w.labelDepth = vanilla.TextBox(
-			(inset, linePos + 2, 120, 14),
+			(inset, linePos + 2, 126, 14),
 			"Depth (units):",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelDepth.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.depth = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"200",
@@ -273,11 +275,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Factor ------------------------------------------------------------
 		self.w.labelFactor = vanilla.TextBox(
-			(inset, linePos + 2, 130, 14),
+			(inset, linePos + 2, 126, 14),
 			"Factor:",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelFactor.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.factor = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"1.25",
@@ -308,11 +311,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Measure every (step) ----------------------------------------------
 		self.w.labelStep = vanilla.TextBox(
-			(inset, linePos + 2, 130, 14),
+			(inset, linePos + 2, 126, 14),
 			"Measure every:",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelStep.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.step = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"5",
@@ -343,11 +347,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Minimum distance --------------------------------------------------
 		self.w.labelMinDist = vanilla.TextBox(
-			(inset, linePos + 2, 125, 14),
+			(inset, linePos + 2, 126, 14),
 			"Minimum distance:",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelMinDist.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.minDist = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"50",
@@ -380,11 +385,12 @@ class KernTabContents(mekkaObject):
 
 		# -- Round to ----------------------------------------------------------
 		self.w.labelRound = vanilla.TextBox(
-			(inset, linePos + 2, 120, 14),
+			(inset, linePos + 2, 126, 14),
 			"Round kern to (units):",
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelRound.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.roundTo = vanilla.EditText(
 			(inset + 130, linePos - 1, 50, 19),
 			"10",
@@ -411,7 +417,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.roundIncBtn.getNSButton().setToolTip_("Increase rounding step")
-		linePos += lineHeight
+		linePos += lineHeight + 6
 
 		# -- Checkboxes --------------------------------------------------------
 		self.w.useGroups = vanilla.CheckBox(
@@ -451,7 +457,7 @@ class KernTabContents(mekkaObject):
 		self.w.skipExisting.getNSButton().setToolTip_(
 			"When enabled, pairs with an existing kern value are left untouched."
 		)
-		linePos += lineHeight + 4
+		linePos += lineHeight + 8
 
 		# -- LetterKerner values in custom parameters --------------------------
 		self.w.labelMaster = vanilla.TextBox(
@@ -460,6 +466,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelMaster.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.extractBtn = vanilla.Button(
 			(inset + 123, linePos, 62, 18),
 			"Extract",
@@ -467,7 +474,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.extractBtn.getNSButton().setToolTip_(
-			"Load settings from the MBLetterKerner custom parameter of the current master."
+			"Load settings from the MBLetterkerner custom parameter of the current master."
 		)
 		self.w.storeBtn = vanilla.Button(
 			(inset + 188, linePos, 80, 18),
@@ -476,7 +483,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.storeBtn.getNSButton().setToolTip_(
-			"Save current settings into the MBLetterKerner custom parameter of the current master."
+			"Save current settings into the MBLetterkerner custom parameter of the current master."
 		)
 		linePos += lineHeight
 
@@ -487,6 +494,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 			selectable=True,
 		)
+		self.w.labelPair.getNSTextField().setAlignment_(NSRightTextAlignment)
 		self.w.measureBtn = vanilla.Button(
 			(inset + 123, linePos, 62, 18),
 			"Measure",
@@ -603,8 +611,8 @@ class KernTabContents(mekkaObject):
 			return
 		master = font.selectedFontMaster
 
-		# Try MBLetterKerner custom parameter first
-		mbParam = master.customParameters["MBLetterKerner"]
+		# Try MBLetterkerner custom parameter first
+		mbParam = master.customParameters["MBLetterkerner"]
 		if mbParam:
 			# New format: semicolon-separated "key=value; key=value" string
 			if isinstance(mbParam, str):
@@ -619,7 +627,7 @@ class KernTabContents(mekkaObject):
 				for key in ("targetArea", "depth", "factor", "step", "minDist", "roundTo"):
 					if key in mbParam:
 						self._setField(key, mbParam[key])
-				self.w.statusText.set("✅ Loaded from MBLetterKerner parameter.")
+				self.w.statusText.set("✅ Loaded from MBLetterkerner parameter.")
 				return
 
 		# Fall back to HTLetterSpacer parameters
@@ -654,7 +662,7 @@ class KernTabContents(mekkaObject):
 				"minDist=%s"    % self.pref("minDist"),
 				"roundTo=%s"    % self.pref("roundTo"),
 			]
-			master.customParameters["MBLetterKerner"] = "; ".join(parts)
+			master.customParameters["MBLetterkerner"] = "; ".join(parts)
 			self.w.statusText.set("✅ Stored in master '%s'." % master.name)
 		except Exception as e:
 			self.w.statusText.set("⚠️ Error: %s" % e)
