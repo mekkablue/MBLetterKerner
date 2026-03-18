@@ -70,6 +70,7 @@ def _isValidGlyphLayer(layer, font):
 
 def _setKerningPair(font, masterID, leftKey, rightKey, value):
 	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print("\t✏️  setKerning: %s | %s = %+g" % (leftKey, rightKey, value))
 	if Glyphs.versionNumber >= 3:
 		font.setKerningForPair(masterID, leftKey, rightKey, value, LTR)
 	else:
@@ -78,6 +79,7 @@ def _setKerningPair(font, masterID, leftKey, rightKey, value):
 
 def _removeKerningPair(font, masterID, leftKey, rightKey):
 	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
+	print("\t🗑  removeKerning: %s | %s" % (leftKey, rightKey))
 	try:
 		if Glyphs.versionNumber >= 3:
 			font.removeKerningForPair(masterID, leftKey, rightKey, LTR)
@@ -109,13 +111,20 @@ def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
 	Remove every kern variant for a glyph pair: group-group, group-glyph,
 	glyph-group, and glyph-glyph. This ensures a clean slate before setting
 	the new value regardless of what combination was stored previously.
+	Also removes the reversed-prefix format to clean up any stale pairs from
+	earlier script runs that used the wrong prefix convention.
 	"""
-	lGroupKey = ("@MMK_L_%s" % leftGlyph.rightKerningGroup) if leftGlyph.rightKerningGroup else None
-	rGroupKey = ("@MMK_R_%s" % rightGlyph.leftKerningGroup) if rightGlyph.leftKerningGroup else None
-	leftKeys  = [k for k in (lGroupKey, leftGlyph.name)  if k]
-	rightKeys = [k for k in (rGroupKey, rightGlyph.name) if k]
-	for lk in leftKeys:
-		for rk in rightKeys:
+	lGroupKey     = ("@MMK_L_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup  else None
+	rGroupKey     = ("@MMK_R_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup   else None
+	# Also remove the old (wrong) reversed format for migration
+	lGroupKeyOld  = ("@MMK_R_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup  else None
+	rGroupKeyOld  = ("@MMK_L_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup   else None
+	print("\t🗑  clear variants: left keys %s / %s, right keys %s / %s" % (
+		lGroupKey, leftGlyph.name, rGroupKey, rightGlyph.name))
+	allLeftKeys  = [k for k in (lGroupKey, lGroupKeyOld, leftGlyph.name)  if k]
+	allRightKeys = [k for k in (rGroupKey, rGroupKeyOld, rightGlyph.name) if k]
+	for lk in allLeftKeys:
+		for rk in allRightKeys:
 			_removeKerningPair(font, masterID, lk, rk)
 
 
@@ -738,6 +747,7 @@ class KernTabContents(mekkaObject):
 			rightKey = kernKeyForGlyph(rightGlyph, 'left', useGroups)
 
 			pairLabel = "%s | %s" % (leftGlyph.name, rightGlyph.name)
+			print("\t🔑 %s → leftKey=%s  rightKey=%s" % (pairLabel, leftKey, rightKey))
 
 			# Skip duplicate kern keys already handled in this run
 			if (leftKey, rightKey) in seenPairs:
