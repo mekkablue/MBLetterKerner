@@ -379,9 +379,9 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 	Uses the glyph's kerning group when available (and useGroups is True),
 	falling back to the bare glyph name.
 
-	Glyphs stores group kerning keys as "@<groupName>" (e.g. "@T", "@H").
-	- Left  glyph in a pair → uses rightKerningGroup → "@<rightKerningGroup>"
-	- Right glyph in a pair → uses leftKerningGroup  → "@<leftKerningGroup>"
+	Pass the return value directly to setKerningForPair / removeKerningForPair.
+	Glyphs resolves a bare group name (e.g. "T") as group kerning internally.
+	Falls back to the glyph name when no group is set or useGroups is False.
 
 	Args:
 		glyph     : GSGlyph
@@ -398,5 +398,5 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 		else:
 			group = glyph.leftKerningGroup
 		if group:
-			return "@%s" % group
+			return group
 	return glyph.name

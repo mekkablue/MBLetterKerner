@@ -77,7 +77,7 @@ def _isValidGlyphLayer(layer, font):
 
 def _setKerningPair(font, masterID, leftKey, rightKey, value):
 	"""Set a kerning pair, handling Glyphs 2 / 3 API differences."""
-	print("\t✏️  setKerning: %s | %s = %+g" % (leftKey, rightKey, value))
+	print(f"\t✏️  setKerning: {leftKey} | {rightKey} = {value:+g}")
 	if Glyphs.versionNumber >= 3:
 		font.setKerningForPair(masterID, leftKey, rightKey, value, LTR)
 	else:
@@ -86,7 +86,7 @@ def _setKerningPair(font, masterID, leftKey, rightKey, value):
 
 def _removeKerningPair(font, masterID, leftKey, rightKey):
 	"""Remove a kerning pair, handling Glyphs 2 / 3 API differences."""
-	print("\t🗑  removeKerning: %s | %s" % (leftKey, rightKey))
+	print(f"\t🗑  removeKerning: {leftKey} | {rightKey}")
 	try:
 		if Glyphs.versionNumber >= 3:
 			font.removeKerningForPair(masterID, leftKey, rightKey, LTR)
@@ -121,18 +121,17 @@ def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
 	Also removes the reversed-prefix format to clean up any stale pairs from
 	earlier script runs that used the wrong prefix convention.
 	"""
-	# Correct format: @<groupName>
-	lGroupKey    = ("@%s" % leftGlyph.rightKerningGroup)   if leftGlyph.rightKerningGroup  else None
-	rGroupKey    = ("@%s" % rightGlyph.leftKerningGroup)   if rightGlyph.leftKerningGroup  else None
-	# Legacy stale-pair cleanup: old runs used @MMK_L_/@MMK_R_ prefixes
-	lGroupKeyOldL = ("@MMK_L_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup else None
-	lGroupKeyOldR = ("@MMK_R_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup else None
-	rGroupKeyOldL = ("@MMK_L_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup else None
-	rGroupKeyOldR = ("@MMK_R_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup else None
-	print("\t🗑  clear variants: left keys %s / %s, right keys %s / %s" % (
-		lGroupKey, leftGlyph.name, rGroupKey, rightGlyph.name))
-	allLeftKeys  = [k for k in (lGroupKey, lGroupKeyOldL, lGroupKeyOldR, leftGlyph.name)  if k]
-	allRightKeys = [k for k in (rGroupKey, rGroupKeyOldL, rGroupKeyOldR, rightGlyph.name) if k]
+	lg = leftGlyph.rightKerningGroup
+	rg = rightGlyph.leftKerningGroup
+	# Correct format: bare group name (Glyphs resolves it as group kerning)
+	lGroupKey = lg if lg else None
+	rGroupKey = rg if rg else None
+	# Legacy cleanup: previous runs stored pairs with @group or @MMK_*_ prefixes
+	lLegacy = [f"@{lg}", f"@MMK_L_{lg}", f"@MMK_R_{lg}"] if lg else []
+	rLegacy = [f"@{rg}", f"@MMK_L_{rg}", f"@MMK_R_{rg}"] if rg else []
+	print(f"\t🗑  clear variants: left keys {lGroupKey} / {leftGlyph.name}, right keys {rGroupKey} / {rightGlyph.name}")
+	allLeftKeys  = [k for k in ([lGroupKey] + lLegacy + [leftGlyph.name])  if k]
+	allRightKeys = [k for k in ([rGroupKey] + rLegacy + [rightGlyph.name]) if k]
 	for lk in allLeftKeys:
 		for rk in allRightKeys:
 			_removeKerningPair(font, masterID, lk, rk)
@@ -756,12 +755,12 @@ class KernTabContents(mekkaObject):
 			leftKey = kernKeyForGlyph(leftGlyph, 'right', useGroups)
 			rightKey = kernKeyForGlyph(rightGlyph, 'left', useGroups)
 
-			pairLabel = "%s | %s" % (leftGlyph.name, rightGlyph.name)
-			print("\t🔑 %s → leftKey=%s  rightKey=%s" % (pairLabel, leftKey, rightKey))
+			pairLabel = f"{leftGlyph.name} | {rightGlyph.name}"
+			print(f"\t🔑 {pairLabel} → leftKey={leftKey}  rightKey={rightKey}")
 
 			# Skip duplicate kern keys already handled in this run
 			if (leftKey, rightKey) in seenPairs:
-				print("\t⏭  %s: skipped (already kerned this run)" % pairLabel)
+				print(f"\t⏭  {pairLabel}: skipped (already kerned this run)")
 				skipCount += 1
 				continue
 			seenPairs.add((leftKey, rightKey))
@@ -775,7 +774,7 @@ class KernTabContents(mekkaObject):
 				except Exception:
 					return True
 			if _layerEmpty(leftLayer) or _layerEmpty(rightLayer):
-				print("\t⏭  %s: skipped (empty layer)" % pairLabel)
+				print(f"\t⏭  {pairLabel}: skipped (empty layer)")
 				skipCount += 1
 				continue
 
@@ -783,8 +782,7 @@ class KernTabContents(mekkaObject):
 			_skipCats = {"Separator", "Mark", "Corner"}
 			if (not leftGlyph.category or leftGlyph.category in _skipCats or
 					not rightGlyph.category or rightGlyph.category in _skipCats):
-				print("\t⏭  %s: skipped (category: %s / %s)" % (
-					pairLabel, leftGlyph.category, rightGlyph.category))
+				print(f"\t⏭  {pairLabel}: skipped (category: {leftGlyph.category} / {rightGlyph.category})")
 				skipCount += 1
 				continue
 
@@ -792,7 +790,7 @@ class KernTabContents(mekkaObject):
 			if skipExisting:
 				existing = _getKerningPair(font, masterID, leftKey, rightKey)
 				if existing is not None:
-					print("\t☑️  %s: skipped (existing kern %+g)" % (pairLabel, existing))
+					print(f"\t☑️  {pairLabel}: skipped (existing kern {existing:+g})")
 					skipCount += 1
 					continue
 
@@ -803,7 +801,7 @@ class KernTabContents(mekkaObject):
 			kern = kernLayerToLayer(leftLayer, rightLayer, parameters)
 
 			if kern is None:
-				print("\t⚠️  %s: could not measure — skipped" % pairLabel)
+				print(f"\t⚠️  {pairLabel}: could not measure — skipped")
 				skipCount += 1
 				continue
 
@@ -814,14 +812,14 @@ class KernTabContents(mekkaObject):
 					actualGap = minGap + kern
 					if actualGap < minDist:
 						kern = minDist - minGap
-						print("\t🔒 %s: bumped to min distance (gap was %+g)" % (pairLabel, actualGap))
+						print(f"\t🔒 {pairLabel}: bumped to min distance (gap was {actualGap:+g})")
 
 			# Round kern value
 			if roundTo > 1:
 				kern = roundTo * round(kern / roundTo)
 
 			_setKerningPair(font, masterID, leftKey, rightKey, kern)
-			print("\t↔️  %s: %+g" % (pairLabel, kern))
+			print(f"\t↔️  {pairLabel}: {kern:+g}")
 			setCount += 1
 
 		Glyphs.redraw()
