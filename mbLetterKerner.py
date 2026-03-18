@@ -379,9 +379,9 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 	Uses the glyph's kerning group when available (and useGroups is True),
 	falling back to the bare glyph name.
 
-	Glyphs uses the prefixes:
-	  @MMK_R_  for the right kerning group of the LEFT  glyph in a pair
-	  @MMK_L_  for the left  kerning group of the RIGHT glyph in a pair
+	Glyphs stores group kerning keys as "@<groupName>" (e.g. "@T", "@H").
+	- Left  glyph in a pair → uses rightKerningGroup → "@<rightKerningGroup>"
+	- Right glyph in a pair → uses leftKerningGroup  → "@<leftKerningGroup>"
 
 	Args:
 		glyph     : GSGlyph
@@ -395,10 +395,8 @@ def kernKeyForGlyph(glyph, side, useGroups=True):
 	if useGroups:
 		if side == 'right':
 			group = glyph.rightKerningGroup
-			if group:
-				return "@MMK_L_%s" % group
 		else:
 			group = glyph.leftKerningGroup
-			if group:
-				return "@MMK_R_%s" % group
+		if group:
+			return "@%s" % group
 	return glyph.name

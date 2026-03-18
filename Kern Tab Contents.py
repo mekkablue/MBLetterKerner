@@ -114,15 +114,18 @@ def _clearAllKernVariants(font, masterID, leftGlyph, rightGlyph):
 	Also removes the reversed-prefix format to clean up any stale pairs from
 	earlier script runs that used the wrong prefix convention.
 	"""
-	lGroupKey     = ("@MMK_L_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup  else None
-	rGroupKey     = ("@MMK_R_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup   else None
-	# Also remove the old (wrong) reversed format for migration
-	lGroupKeyOld  = ("@MMK_R_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup  else None
-	rGroupKeyOld  = ("@MMK_L_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup   else None
+	# Correct format: @<groupName>
+	lGroupKey    = ("@%s" % leftGlyph.rightKerningGroup)   if leftGlyph.rightKerningGroup  else None
+	rGroupKey    = ("@%s" % rightGlyph.leftKerningGroup)   if rightGlyph.leftKerningGroup  else None
+	# Legacy stale-pair cleanup: old runs used @MMK_L_/@MMK_R_ prefixes
+	lGroupKeyOldL = ("@MMK_L_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup else None
+	lGroupKeyOldR = ("@MMK_R_%s" % leftGlyph.rightKerningGroup)  if leftGlyph.rightKerningGroup else None
+	rGroupKeyOldL = ("@MMK_L_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup else None
+	rGroupKeyOldR = ("@MMK_R_%s" % rightGlyph.leftKerningGroup)  if rightGlyph.leftKerningGroup else None
 	print("\t🗑  clear variants: left keys %s / %s, right keys %s / %s" % (
 		lGroupKey, leftGlyph.name, rGroupKey, rightGlyph.name))
-	allLeftKeys  = [k for k in (lGroupKey, lGroupKeyOld, leftGlyph.name)  if k]
-	allRightKeys = [k for k in (rGroupKey, rGroupKeyOld, rightGlyph.name) if k]
+	allLeftKeys  = [k for k in (lGroupKey, lGroupKeyOldL, lGroupKeyOldR, leftGlyph.name)  if k]
+	allRightKeys = [k for k in (rGroupKey, rGroupKeyOldL, rGroupKeyOldR, rightGlyph.name) if k]
 	for lk in allLeftKeys:
 		for rk in allRightKeys:
 			_removeKerningPair(font, masterID, lk, rk)
