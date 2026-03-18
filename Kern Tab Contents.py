@@ -192,7 +192,7 @@ class KernTabContents(mekkaObject):
 		# -- Description -------------------------------------------------------
 		self.w.descriptionText = vanilla.TextBox(
 			(inset, linePos, -inset, 28),
-			"Optically kern every pair in the current tab (MB LetterKerner).",
+			"Optically kern every pair in the current tab (MB Letterkerner).",
 			sizeStyle="small",
 			selectable=True,
 		)
@@ -222,16 +222,18 @@ class KernTabContents(mekkaObject):
 		_areaBtnX = inset + 130 + 50 + 3
 		self.w.areaDecBtn = vanilla.Button(
 			(_areaBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseArea,
 			sizeStyle="small",
 		)
+		self.w.areaDecBtn.getNSButton().setToolTip_("Decrease target area")
 		self.w.areaIncBtn = vanilla.Button(
 			(_areaBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseArea,
 			sizeStyle="small",
 		)
+		self.w.areaIncBtn.getNSButton().setToolTip_("Increase target area")
 		linePos += lineHeight
 
 		# -- Depth -------------------------------------------------------------
@@ -255,16 +257,18 @@ class KernTabContents(mekkaObject):
 		_depthBtnX = inset + 130 + 50 + 3
 		self.w.depthDecBtn = vanilla.Button(
 			(_depthBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseDepth,
 			sizeStyle="small",
 		)
+		self.w.depthDecBtn.getNSButton().setToolTip_("Decrease probe depth")
 		self.w.depthIncBtn = vanilla.Button(
 			(_depthBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseDepth,
 			sizeStyle="small",
 		)
+		self.w.depthIncBtn.getNSButton().setToolTip_("Increase probe depth")
 		linePos += lineHeight
 
 		# -- Factor ------------------------------------------------------------
@@ -288,16 +292,18 @@ class KernTabContents(mekkaObject):
 		_factorBtnX = inset + 130 + 50 + 3
 		self.w.factorDecBtn = vanilla.Button(
 			(_factorBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseFactor,
 			sizeStyle="small",
 		)
+		self.w.factorDecBtn.getNSButton().setToolTip_("Decrease factor")
 		self.w.factorIncBtn = vanilla.Button(
 			(_factorBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseFactor,
 			sizeStyle="small",
 		)
+		self.w.factorIncBtn.getNSButton().setToolTip_("Increase factor")
 		linePos += lineHeight
 
 		# -- Measure every (step) ----------------------------------------------
@@ -321,16 +327,18 @@ class KernTabContents(mekkaObject):
 		_stepBtnX = inset + 130 + 50 + 3
 		self.w.stepDecBtn = vanilla.Button(
 			(_stepBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseStep,
 			sizeStyle="small",
 		)
+		self.w.stepDecBtn.getNSButton().setToolTip_("Decrease sampling interval (coarser, faster)")
 		self.w.stepIncBtn = vanilla.Button(
 			(_stepBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseStep,
 			sizeStyle="small",
 		)
+		self.w.stepIncBtn.getNSButton().setToolTip_("Increase sampling interval (coarser, faster)")
 		linePos += lineHeight
 
 		# -- Minimum distance --------------------------------------------------
@@ -356,16 +364,18 @@ class KernTabContents(mekkaObject):
 		_minDistBtnX = inset + 130 + 50 + 3
 		self.w.minDistDecBtn = vanilla.Button(
 			(_minDistBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseMinDist,
 			sizeStyle="small",
 		)
+		self.w.minDistDecBtn.getNSButton().setToolTip_("Decrease minimum distance")
 		self.w.minDistIncBtn = vanilla.Button(
 			(_minDistBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseMinDist,
 			sizeStyle="small",
 		)
+		self.w.minDistIncBtn.getNSButton().setToolTip_("Increase minimum distance")
 		linePos += lineHeight
 
 		# -- Round to ----------------------------------------------------------
@@ -389,16 +399,18 @@ class KernTabContents(mekkaObject):
 		_roundBtnX = inset + 130 + 50 + 3
 		self.w.roundDecBtn = vanilla.Button(
 			(_roundBtnX, linePos, 20, 18),
-			"◀︎",
+			"−",
 			callback=self.decreaseRoundTo,
 			sizeStyle="small",
 		)
+		self.w.roundDecBtn.getNSButton().setToolTip_("Decrease rounding step")
 		self.w.roundIncBtn = vanilla.Button(
 			(_roundBtnX + 22, linePos, 20, 18),
-			"►",
+			"+",
 			callback=self.increaseRoundTo,
 			sizeStyle="small",
 		)
+		self.w.roundIncBtn.getNSButton().setToolTip_("Increase rounding step")
 		linePos += lineHeight
 
 		# -- Checkboxes --------------------------------------------------------
@@ -410,7 +422,7 @@ class KernTabContents(mekkaObject):
 			sizeStyle="small",
 		)
 		self.w.useGroups.getNSButton().setToolTip_(
-			"When enabled, kern pairs are stored against @MMK group keys. "
+			"When enabled, kern pairs are stored against kerning group keys. "
 			"Disable to kern individual glyphs only."
 		)
 		linePos += lineHeight
@@ -444,7 +456,7 @@ class KernTabContents(mekkaObject):
 		# -- LetterKerner values in custom parameters --------------------------
 		self.w.labelMaster = vanilla.TextBox(
 			(inset, linePos + 2, 120, 14),
-			"LetterKerner values:",
+			"Letterkerner values:",
 			sizeStyle="small",
 			selectable=True,
 		)
@@ -454,11 +466,17 @@ class KernTabContents(mekkaObject):
 			callback=self.extractPrefs,
 			sizeStyle="small",
 		)
+		self.w.extractBtn.getNSButton().setToolTip_(
+			"Load settings from the MBLetterKerner custom parameter of the current master."
+		)
 		self.w.storeBtn = vanilla.Button(
 			(inset + 188, linePos, 80, 18),
 			"Store",
 			callback=self.storePrefs,
 			sizeStyle="small",
+		)
+		self.w.storeBtn.getNSButton().setToolTip_(
+			"Save current settings into the MBLetterKerner custom parameter of the current master."
 		)
 		linePos += lineHeight
 
@@ -475,11 +493,17 @@ class KernTabContents(mekkaObject):
 			callback=self.measureCurrentPair,
 			sizeStyle="small",
 		)
+		self.w.measureBtn.getNSButton().setToolTip_(
+			"Measure the optical area of the current pair and load it into the Target area field."
+		)
 		self.w.setZeroBtn = vanilla.Button(
 			(inset + 188, linePos, 80, 18),
 			"Set to Zero",
 			callback=self.setCurrentPairToZero,
 			sizeStyle="small",
+		)
+		self.w.setZeroBtn.getNSButton().setToolTip_(
+			"Set an explicit kern of 0 for the current pair (overrides any group kern)."
 		)
 		linePos += lineHeight
 
@@ -494,6 +518,9 @@ class KernTabContents(mekkaObject):
 			"Kern",
 			callback=self.run,
 			sizeStyle="regular",
+		)
+		self.w.runButton.getNSButton().setToolTip_(
+			"Kern all consecutive pairs in the current tab using the settings above."
 		)
 		self.w.setDefaultButton(self.w.runButton)
 
@@ -737,7 +764,7 @@ class KernTabContents(mekkaObject):
 		glyphLayers = [l for l in layers if _isValidGlyphLayer(l, font)]
 
 		Glyphs.clearLog()
-		print("Kern Tab Contents — MB LetterKerner\n")
+		print("Kern Tab Contents — MB Letterkerner\n")
 		print("Master: %s  |  x-height: %g  |  target area: %g units² (%g K)\n" % (
 			master.name, xHeight, targetArea, targetArea / 1000.0))
 
