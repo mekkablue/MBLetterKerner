@@ -8,7 +8,7 @@ Optical kerning scripts for [Glyphs.app](https://glyphsapp.com/), by [mekkablue]
 
 **MB LetterKerner** borrows the optical measurement engine from
 **[HT LetterSpacer](https://github.com/huertatipografica/HTLetterSpacer)**
-by [Huerta Tipográfica](https://www.huertatipografica.com/) and repurposes
+by [HT Fonts](https://www.htfonts.com/) and repurposes
 it for kerning.
 
 HT LetterSpacer shoots horizontal rays inward from each side of a glyph,
@@ -21,9 +21,9 @@ value that brings the combined optical area to the target.
 
 > **Credits & kudos:** The optical measurement model — trapezoidal vertical
 > weighting, per-side depth clamping, and the notion of an "area" target —
-> is entirely the work of Huerta Tipográfica. This repository is an adaptation
+> is entirely the work of HT Fonts. This repository is an adaptation
 > of their idea to the kerning domain. Please support their work at
-> <https://www.huertatipografica.com/>.
+> <https://www.htfonts.com/>.
 
 ---
 
@@ -144,4 +144,4 @@ Copyright 2024 Rainer Erich Scheichelbauer (mekkablue).
 Licensed under the [Apache License, Version 2.0](LICENSE).
 
 The optical measurement concept is adapted from
-**HT LetterSpacer** © Huerta Tipográfica, also Apache 2.0.
+**HT LetterSpacer** © HT Fonts, also Apache 2.0.
